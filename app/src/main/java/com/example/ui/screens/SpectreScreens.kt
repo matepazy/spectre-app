@@ -1950,14 +1950,14 @@ fun AboutView(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Spectre Privacy Auditor",
+                text = "Spectre",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = CyberTextPrimary
             )
 
             Text(
-                text = "Version 1.0 (Audit Build)",
+                text = "Version 1.0",
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace,
                 color = CyberTextSecondary

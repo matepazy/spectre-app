@@ -1,4 +1,4 @@
-# 👻 Spectre (Android Device Fingerprinting & Diagnostics)
+# 👻 Spectre
 
 **Spectre** is a diagnostic and forensic tool for Android designed to showcase and analyze the vast landscape of device characteristics, identifiers, build parameters, sensor telemetry, and hardware fingerprints that apps can read.
 
