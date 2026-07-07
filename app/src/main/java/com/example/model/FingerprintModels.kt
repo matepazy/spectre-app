@@ -22,6 +22,18 @@ enum class SignalCategory(
     )
 }
 
+data class DetailedItem(
+    val label: String,
+    val value: String,
+    val description: String? = null,
+    val iconName: String? = null
+)
+
+data class DetailedGroup(
+    val categoryName: String?,
+    val items: List<DetailedItem>
+)
+
 data class FingerprintSignal(
     val id: String,
     val name: String,
@@ -30,5 +42,7 @@ data class FingerprintSignal(
     val rawValue: String,
     val narrative: String,
     val threatScore: Int, // 0 to 10
-    val permissionName: String? = null
+    val permissionName: String? = null,
+    val detailedData: List<DetailedGroup>? = null
 )
+

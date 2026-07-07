@@ -41,9 +41,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.matepazy.spectre.model.CategoryStore
 import com.matepazy.spectre.model.FingerprintSignal
 import com.matepazy.spectre.model.SignalCategory
+import com.matepazy.spectre.model.DetailedGroup
+import com.matepazy.spectre.model.DetailedItem
 import android.os.Build
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Path
@@ -618,6 +621,7 @@ fun HomeView(
     val context = LocalContext.current
     var showExportDialog by remember { mutableStateOf(false) }
     var showAboutView by remember { mutableStateOf(false) }
+    var activeDetailedSignal by remember { mutableStateOf<FingerprintSignal?>(null) }
     val hazeState = remember { HazeState() }
 
     // Multi-Permission Request Launcher
@@ -867,14 +871,21 @@ fun HomeView(
                             }
                         } else {
                             items(filteredSignals, key = { it.id }) { signal ->
-                                SignalRowView(signal = signal, context = context, onActionClick = {
-                                    if (signal.category == SignalCategory.NEEDS_PERMISSION && signal.permissionName != null) {
-                                        val safePermissions = PermissionCenter.getSafePermissionsToRequest(signal.permissionName)
-                                        if (safePermissions.isNotEmpty()) {
-                                            permissionsLauncher.launch(safePermissions)
+                                SignalRowView(
+                                    signal = signal,
+                                    context = context,
+                                    onActionClick = {
+                                        if (signal.category == SignalCategory.NEEDS_PERMISSION && signal.permissionName != null) {
+                                            val safePermissions = PermissionCenter.getSafePermissionsToRequest(signal.permissionName)
+                                            if (safePermissions.isNotEmpty()) {
+                                                permissionsLauncher.launch(safePermissions)
+                                            }
                                         }
+                                    },
+                                    onDetailClick = {
+                                        activeDetailedSignal = signal
                                     }
-                                })
+                                )
                             }
                         }
 
@@ -890,7 +901,10 @@ fun HomeView(
 
     // Export Dialog Overlay
     if (showExportDialog && uiState.inferenceResult != null) {
-        Dialog(onDismissRequest = { showExportDialog = false }) {
+        Dialog(
+            onDismissRequest = { showExportDialog = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
             ExportView(
                 signals = uiState.signals,
                 inference = uiState.inferenceResult,
@@ -901,7 +915,10 @@ fun HomeView(
 
     // About Dialog Overlay
     if (showAboutView) {
-        Dialog(onDismissRequest = { showAboutView = false }) {
+        Dialog(
+            onDismissRequest = { showAboutView = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
             AboutView(
                 onDismiss = { showAboutView = false },
                 onResetOnboarding = {
@@ -909,6 +926,19 @@ fun HomeView(
                     showAboutView = false
                 },
                 viewModel = viewModel
+            )
+        }
+    }
+
+    // Detailed Registry Dialog Overlay
+    if (activeDetailedSignal != null) {
+        Dialog(
+            onDismissRequest = { activeDetailedSignal = null },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            DetailedRegistryView(
+                signal = activeDetailedSignal!!,
+                onDismiss = { activeDetailedSignal = null }
             )
         }
     }
@@ -1459,7 +1489,8 @@ private fun getTrackingRiskExplanation(signal: FingerprintSignal): String {
 fun SignalRowView(
     signal: FingerprintSignal,
     context: Context,
-    onActionClick: () -> Unit
+    onActionClick: () -> Unit,
+    onDetailClick: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     
@@ -1528,29 +1559,68 @@ fun SignalRowView(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Raw value chip
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(
-                            if (signal.rawValue == "Permission Blocked") CyberRed.copy(alpha = 0.1f)
-                            else CyberBorder
+                // Raw value chip and interactive chevron indicator if detailedData is available
+                if (signal.detailedData != null) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                if (signal.rawValue == "Permission Blocked") CyberRed.copy(alpha = 0.1f)
+                                else CyberBorder.copy(alpha = 0.4f)
+                            )
+                            .border(
+                                1.dp,
+                                if (signal.rawValue == "Permission Blocked") CyberRed.copy(alpha = 0.4f)
+                                else categoryColor.copy(alpha = 0.5f),
+                                RoundedCornerShape(8.dp)
+                            )
+                            .clickable { onDetailClick() }
+                            .padding(horizontal = 8.dp, vertical = 6.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = if (signal.rawValue.length > 20) signal.rawValue.take(17) + "..." else signal.rawValue,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Monospace,
+                                color = if (signal.rawValue == "Permission Blocked") CyberRed else CyberTextPrimary
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = "View Detailed Registry",
+                                tint = categoryColor,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                if (signal.rawValue == "Permission Blocked") CyberRed.copy(alpha = 0.1f)
+                                else CyberBorder
+                            )
+                            .border(
+                                0.5.dp,
+                                if (signal.rawValue == "Permission Blocked") CyberRed.copy(alpha = 0.3f)
+                                else CyberBorder,
+                                RoundedCornerShape(8.dp)
+                            )
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = if (signal.rawValue.length > 25) signal.rawValue.take(22) + "..." else signal.rawValue,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace,
+                            color = if (signal.rawValue == "Permission Blocked") CyberRed else CyberTextPrimary
                         )
-                        .border(
-                            0.5.dp,
-                            if (signal.rawValue == "Permission Blocked") CyberRed.copy(alpha = 0.3f)
-                            else CyberBorder,
-                            RoundedCornerShape(6.dp)
-                        )
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = if (signal.rawValue.length > 25) signal.rawValue.take(22) + "..." else signal.rawValue,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace,
-                        color = if (signal.rawValue == "Permission Blocked") CyberRed else CyberTextPrimary
-                    )
+                    }
                 }
             }
 
@@ -1825,8 +1895,9 @@ fun ExportView(
 
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
+            .fillMaxWidth(0.96f)
+            .padding(vertical = 24.dp)
+            .wrapContentHeight(),
         colors = CardDefaults.cardColors(containerColor = CyberCardBg),
         border = BorderStroke(1.dp, CyberBorder),
         shape = RoundedCornerShape(16.dp)
@@ -1961,8 +2032,9 @@ fun AboutView(
 
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
+            .fillMaxWidth(0.96f)
+            .padding(vertical = 24.dp)
+            .wrapContentHeight(),
         colors = CardDefaults.cardColors(containerColor = CyberCardBg),
         border = BorderStroke(1.dp, CyberBorder),
         shape = RoundedCornerShape(16.dp)
@@ -1995,7 +2067,7 @@ fun AboutView(
             )
 
             Text(
-                text = "v1.1.0",
+                text = "v1.2.0",
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace,
                 color = CyberTextSecondary
@@ -2101,5 +2173,318 @@ fun AboutView(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun DetailedRegistryView(
+    signal: FingerprintSignal,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
+
+    val categoryColor = when (signal.category) {
+        SignalCategory.PASSIVE -> CyberGreen
+        SignalCategory.NEEDS_PERMISSION -> SpectrePurple
+        SignalCategory.ADVANCED -> CyberOrange
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth(0.96f)
+            .padding(vertical = 24.dp)
+            .wrapContentHeight(),
+        colors = CardDefaults.cardColors(containerColor = CyberCardBg.copy(alpha = 0.80f)),
+        border = BorderStroke(1.5.dp, categoryColor.copy(alpha = 0.6f)),
+        shape = RoundedCornerShape(24.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+        ) {
+            // Drag Handle Indicator
+            Box(
+                modifier = Modifier
+                    .width(40.dp)
+                    .height(4.dp)
+                    .clip(CircleShape)
+                    .background(CyberBorder)
+                    .align(Alignment.CenterHorizontally)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Header Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val signalIcon = remember(signal.id) { getSignalIcon(signal.id) }
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(categoryColor.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = signalIcon,
+                        contentDescription = null,
+                        tint = categoryColor,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = signal.name,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = CyberTextPrimary
+                    )
+                    Text(
+                        text = signal.category.title + " Vector",
+                        fontSize = 11.sp,
+                        color = categoryColor,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace
+                    )
+                }
+
+                // Copy All Button
+                IconButton(
+                    onClick = {
+                        val fullReport = StringBuilder()
+                        fullReport.append("Signal: ${signal.name}\n")
+                        fullReport.append("Category: ${signal.category.title}\n")
+                        fullReport.append("Raw Value Summary: ${signal.rawValue}\n\n")
+                        signal.detailedData?.forEach { group ->
+                            fullReport.append("--- ${group.categoryName ?: "Registry"} ---\n")
+                            group.items.forEach { item ->
+                                fullReport.append("${item.label}: ${item.value}")
+                                if (item.description != null) {
+                                    fullReport.append(" (${item.description})")
+                                }
+                                fullReport.append("\n")
+                            }
+                            fullReport.append("\n")
+                        }
+                        clipboard.setText(AnnotatedString(fullReport.toString()))
+                        Toast.makeText(context, "Copied entire registry to clipboard!", Toast.LENGTH_SHORT).show()
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = "Copy All Data",
+                        tint = CyberTextSecondary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Scrollable Registry Content
+            Box(
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .heightIn(max = 450.dp)
+            ) {
+                val scrollState = rememberScrollState()
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(scrollState)
+                ) {
+                    val detailedDataList = signal.detailedData
+                    if (detailedDataList.isNullOrEmpty()) {
+                        // Fallback: If no detailedData, show a structured card for the rawValue
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = CyberBorder.copy(alpha = 0.2f)),
+                            border = BorderStroke(1.dp, CyberBorder),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Text(
+                                    text = "Raw Registry Value",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = CyberBlue,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.Top,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = signal.rawValue,
+                                        fontSize = 12.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        color = CyberTextPrimary,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    IconButton(
+                                        onClick = {
+                                            clipboard.setText(AnnotatedString(signal.rawValue))
+                                            Toast.makeText(context, "Copied value!", Toast.LENGTH_SHORT).show()
+                                        },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ContentCopy,
+                                            contentDescription = "Copy",
+                                            tint = CyberTextSecondary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Display Groups
+                        detailedDataList.forEachIndexed { groupIdx, group ->
+                            if (groupIdx > 0) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+                            
+                            Text(
+                                text = (group.categoryName ?: "").uppercase(),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = CyberBlue,
+                                fontFamily = FontFamily.Monospace,
+                                modifier = Modifier.padding(bottom = 6.dp)
+                            )
+
+                            // Display Table/Grid Layout for items
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = CyberBorder.copy(alpha = 0.2f)),
+                                border = BorderStroke(1.dp, CyberBorder),
+                                shape = RoundedCornerShape(14.dp)
+                            ) {
+                                Column {
+                                    group.items.forEachIndexed { idx, item ->
+                                        if (idx > 0) {
+                                            HorizontalDivider(color = CyberBorder, thickness = 0.5.dp)
+                                        }
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            // Item Icon
+                                            val itemIcon = getDetailItemIcon(item.iconName ?: "info")
+                                            Icon(
+                                                imageVector = itemIcon,
+                                                contentDescription = null,
+                                                tint = categoryColor.copy(alpha = 0.8f),
+                                                modifier = Modifier.size(18.dp)
+                                            )
+
+                                            Spacer(modifier = Modifier.width(10.dp))
+
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = item.label,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = CyberTextPrimary
+                                                )
+                                                if (item.description != null) {
+                                                    Text(
+                                                        text = item.description!!,
+                                                        fontSize = 10.sp,
+                                                        color = CyberTextSecondary,
+                                                        lineHeight = 12.sp
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = item.value,
+                                                    fontSize = 11.sp,
+                                                    fontFamily = FontFamily.Monospace,
+                                                    color = CyberTextPrimary,
+                                                    lineHeight = 14.sp
+                                                )
+                                            }
+
+                                            Spacer(modifier = Modifier.width(8.dp))
+
+                                            // Individual Row Copy Button
+                                            IconButton(
+                                                onClick = {
+                                                    clipboard.setText(AnnotatedString("${item.label}: ${item.value}"))
+                                                    Toast.makeText(context, "Copied row detail!", Toast.LENGTH_SHORT).show()
+                                                },
+                                                modifier = Modifier.size(28.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.ContentCopy,
+                                                    contentDescription = "Copy Row",
+                                                    tint = CyberTextSecondary,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Action/Close button
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(containerColor = categoryColor),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(100)
+            ) {
+                Text(
+                    text = "Close Registry",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
+            }
+        }
+    }
+}
+
+private fun getDetailItemIcon(name: String): ImageVector {
+    return when (name.lowercase()) {
+        "calendar" -> Icons.Default.DateRange
+        "camera" -> Icons.Default.CameraAlt
+        "person", "contact", "account" -> Icons.Default.Person
+        "hardware", "cpu", "sensor" -> Icons.Default.Memory
+        "time", "timer" -> Icons.Default.Timer
+        "security", "key" -> Icons.Default.Security
+        "wifi", "network" -> Icons.Default.Wifi
+        "settings" -> Icons.Default.Settings
+        "phone", "call" -> Icons.Default.Phone
+        "sms", "email" -> Icons.Default.Email
+        "media", "image" -> Icons.Default.Image
+        "storage" -> Icons.Default.Storage
+        "mic" -> Icons.Default.Mic
+        "keyboard" -> Icons.Default.Keyboard
+        "usb" -> Icons.Default.Usb
+        "bluetooth" -> Icons.Default.Bluetooth
+        "check" -> Icons.Default.CheckCircle
+        "close", "error" -> Icons.Default.Cancel
+        else -> Icons.Default.Info
     }
 }
