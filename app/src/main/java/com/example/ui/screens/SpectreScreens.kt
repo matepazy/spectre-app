@@ -157,8 +157,8 @@ fun authenticateBiometrically(
         })
 
     val promptInfo = BiometricPrompt.PromptInfo.Builder()
-        .setTitle("Spectre Decryption Required")
-        .setSubtitle("Authenticate using your device security to decrypt the privacy audit registries.")
+        .setTitle("Spectre Lock")
+        .setSubtitle("Authenticate using your device security to access the privacy audit registries.")
         .setNegativeButtonText("Cancel")
         .setAllowedAuthenticators(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG or androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK)
         .build()
@@ -235,7 +235,7 @@ fun LockScreen(onUnlockSuccess: () -> Unit) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "This application is encrypted with device biometrics to protect sensitive device audit logs.",
+                text = "This application is locked with device biometrics to protect sensitive device audit logs.",
                 fontSize = 12.sp,
                 color = CyberTextSecondary,
                 textAlign = TextAlign.Center,
@@ -1927,11 +1927,9 @@ fun AboutView(
                     .border(1.dp, CyberBlue, RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.FilterCenterFocus,
-                    contentDescription = null,
-                    tint = CyberBlue,
-                    modifier = Modifier.size(36.dp)
+                SpectreLogo(
+                    modifier = Modifier.size(36.dp),
+                    color = CyberBlue
                 )
             }
 
@@ -1945,7 +1943,7 @@ fun AboutView(
             )
 
             Text(
-                text = "Version 1.0",
+                text = "v1.1.0",
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace,
                 color = CyberTextSecondary
