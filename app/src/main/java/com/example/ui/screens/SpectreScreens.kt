@@ -2249,7 +2249,7 @@ fun DetailedRegistryView(
             .fillMaxWidth(0.96f)
             .padding(vertical = 24.dp)
             .wrapContentHeight(),
-        colors = CardDefaults.cardColors(containerColor = CyberCardBg.copy(alpha = 0.80f)),
+        colors = CardDefaults.cardColors(containerColor = CyberCardBg),
         border = BorderStroke(1.5.dp, categoryColor.copy(alpha = 0.6f)),
         shape = RoundedCornerShape(24.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
