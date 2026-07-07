@@ -11,16 +11,22 @@ plugins {
 
 android {
   namespace = "com.matepazy.spectre"
-  compileSdk { version = release(36) { minorApiLevel = 1 } }
+  compileSdk = 37
 
   defaultConfig {
     applicationId = "com.matepazy.spectre"
     minSdk = 24
-    targetSdk = 36
+    targetSdk = 37
     versionCode = 1
     versionName = "1.1.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+  }
+
+  packaging {
+    jniLibs {
+      useLegacyPackaging = false
+    }
   }
 
   signingConfigs {
