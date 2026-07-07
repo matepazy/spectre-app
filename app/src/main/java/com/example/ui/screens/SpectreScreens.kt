@@ -53,6 +53,12 @@ import com.matepazy.spectre.ui.theme.*
 import com.matepazy.spectre.viewmodel.SpectreViewModel
 import android.content.ContextWrapper
 import androidx.biometric.BiometricPrompt
+import androidx.compose.ui.platform.LocalLayoutDirection
+import dev.chrisbanes.haze.haze
+import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
 import androidx.biometric.BiometricManager
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
@@ -612,6 +618,7 @@ fun HomeView(
     val context = LocalContext.current
     var showExportDialog by remember { mutableStateOf(false) }
     var showAboutView by remember { mutableStateOf(false) }
+    val hazeState = remember { HazeState() }
 
     // Multi-Permission Request Launcher
     val permissionsLauncher = rememberLauncherForActivityResult(
@@ -629,20 +636,24 @@ fun HomeView(
                 Box(
                     modifier = Modifier
                         .matchParentSize()
-                        .background(
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                MaterialTheme.colorScheme.surface.copy(alpha = 0.25f)
-                            } else {
-                                MaterialTheme.colorScheme.background
-                            }
+                        .hazeChild(
+                            state = hazeState,
+                            style = HazeStyle(
+                                backgroundColor = CyberDarkBg,
+                                blurRadius = 20.dp,
+                                tints = listOf(HazeTint(color = CyberDarkBg.copy(alpha = 0.35f))),
+                                noiseFactor = 0.15f
+                            )
                         )
-                        .let { modifier ->
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                modifier.blur(16.dp)
-                            } else {
-                                modifier
-                            }
-                        }
+                )
+
+                // Bottom border to define the glass card edge
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(CyberBorder.copy(alpha = 0.4f))
                 )
                 
                 TopAppBar(
@@ -680,57 +691,92 @@ fun HomeView(
             }
         },
         bottomBar = {
-            NavigationBar(
-                containerColor = CyberCardBg,
-                tonalElevation = 8.dp
+            Box(
+                modifier = Modifier.fillMaxWidth()
             ) {
-                SignalCategory.values().forEach { category ->
-                    val isSelected = uiState.selectedCategory == category
-                    val indicatorColor = when (category) {
-                        SignalCategory.PASSIVE -> CyberGreen
-                        SignalCategory.NEEDS_PERMISSION -> SpectrePurple
-                        SignalCategory.ADVANCED -> CyberOrange
+                // Background Layer for Glassmorphism
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .hazeChild(
+                            state = hazeState,
+                            style = HazeStyle(
+                                backgroundColor = CyberDarkBg,
+                                blurRadius = 20.dp,
+                                tints = listOf(HazeTint(color = CyberDarkBg.copy(alpha = 0.35f))),
+                                noiseFactor = 0.15f
+                            )
+                        )
+                )
+
+                // Top border to define the glass card edge for bottom bar
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .align(Alignment.TopCenter)
+                        .background(CyberBorder.copy(alpha = 0.4f))
+                )
+
+                NavigationBar(
+                    containerColor = Color.Transparent,
+                    tonalElevation = 0.dp
+                ) {
+                    SignalCategory.values().forEach { category ->
+                        val isSelected = uiState.selectedCategory == category
+                        val indicatorColor = when (category) {
+                            SignalCategory.PASSIVE -> CyberGreen
+                            SignalCategory.NEEDS_PERMISSION -> SpectrePurple
+                            SignalCategory.ADVANCED -> CyberOrange
+                        }
+                        NavigationBarItem(
+                            selected = isSelected,
+                            onClick = { viewModel.selectCategory(category) },
+                            icon = {
+                                Icon(
+                                    imageVector = when (category) {
+                                        SignalCategory.PASSIVE -> Icons.Default.Visibility
+                                        SignalCategory.NEEDS_PERMISSION -> Icons.Default.Shield
+                                        SignalCategory.ADVANCED -> Icons.Default.Warning
+                                    },
+                                    contentDescription = category.title
+                                )
+                            },
+                            label = {
+                                Text(
+                                    text = category.title,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.SansSerif
+                                )
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = indicatorColor,
+                                selectedTextColor = indicatorColor,
+                                indicatorColor = indicatorColor.copy(alpha = 0.12f),
+                                unselectedIconColor = CyberTextSecondary,
+                                unselectedTextColor = CyberTextSecondary
+                            ),
+                            modifier = Modifier.testTag("tab_${category.name.lowercase()}")
+                        )
                     }
-                    NavigationBarItem(
-                        selected = isSelected,
-                        onClick = { viewModel.selectCategory(category) },
-                        icon = {
-                            Icon(
-                                imageVector = when (category) {
-                                    SignalCategory.PASSIVE -> Icons.Default.Visibility
-                                    SignalCategory.NEEDS_PERMISSION -> Icons.Default.Shield
-                                    SignalCategory.ADVANCED -> Icons.Default.Warning
-                                },
-                                contentDescription = category.title
-                            )
-                        },
-                        label = {
-                            Text(
-                                text = category.title,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 11.sp,
-                                fontFamily = FontFamily.SansSerif
-                            )
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = indicatorColor,
-                            selectedTextColor = indicatorColor,
-                            indicatorColor = indicatorColor.copy(alpha = 0.12f),
-                            unselectedIconColor = CyberTextSecondary,
-                            unselectedTextColor = CyberTextSecondary
-                        ),
-                        modifier = Modifier.testTag("tab_${category.name.lowercase()}")
-                    )
                 }
             }
         },
         modifier = Modifier.fillMaxSize(),
         containerColor = CyberDarkBg
     ) { innerPadding ->
+        val topPadding = innerPadding.calculateTopPadding()
+        val bottomPadding = innerPadding.calculateBottomPadding()
+        val layoutDirection = LocalLayoutDirection.current
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(
+                    start = innerPadding.calculateStartPadding(layoutDirection),
+                    end = innerPadding.calculateEndPadding(layoutDirection)
+                )
                 .background(CyberDarkBg)
         ) {
             val showFullScreenLoader = uiState.isScanning && uiState.signals.isEmpty()
@@ -740,7 +786,8 @@ fun HomeView(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxWidth(),
+                        .fillMaxWidth()
+                        .padding(top = topPadding, bottom = bottomPadding),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -776,7 +823,12 @@ fun HomeView(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = 16.dp)
+                            .haze(hazeState),
+                        contentPadding = PaddingValues(
+                            top = topPadding + 16.dp,
+                            bottom = bottomPadding + 16.dp
+                        ),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         // Filtered signal rows
