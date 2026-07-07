@@ -378,159 +378,203 @@ fun SpectreAppContainer(viewModel: SpectreViewModel) {
 @Composable
 fun OnboardingView(onOnboardingComplete: () -> Unit) {
     var step by remember { mutableIntStateOf(1) }
+    val hazeState = remember { HazeState() }
     
     val gradientBrush = Brush.verticalGradient(
         colors = listOf(CyberDarkBg, Color(0xFFECEAF8))
     )
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(gradientBrush)
-            .safeDrawingPadding()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // App Logo / Header
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(top = 16.dp)
-        ) {
-            SpectreLogo(
-                modifier = Modifier.size(54.dp),
-                color = SpectrePurple
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = "SPECTRE",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Black,
-                fontFamily = FontFamily.Monospace,
-                color = SpectrePurple,
-                letterSpacing = 4.sp
-            )
-        }
-
-        // Center Content with Slide Transition
+        // Background container with haze applied, drawing the mesh blobs
         Box(
             modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .haze(hazeState)
         ) {
-            AnimatedContent(
-                targetState = step,
-                transitionSpec = {
-                    if (targetState > initialState) {
-                        (slideInHorizontally { width -> width } + fadeIn()).togetherWith(
-                            slideOutHorizontally { width -> -width } + fadeOut())
-                    } else {
-                        (slideInHorizontally { width -> -width } + fadeIn()).togetherWith(
-                            slideOutHorizontally { width -> width } + fadeOut())
-                    }.using(SizeTransform(clip = false))
-                },
-                label = "OnboardingStep"
-            ) { currentStep ->
-                when (currentStep) {
-                    1 -> OnboardingStepCard(
-                        icon = Icons.Default.Radar,
-                        title = "What are Spectral Vectors?",
-                        description = "Hidden, ghost-like telemetry and tracking vectors quietly monitor your hardware state, battery discharges, network parameters, and screen layouts. Advertisers synthesize these silent background metrics into a unique digital Spectre that tracks you invisibly.",
-                        tint = CyberGreen
-                    )
-                    2 -> OnboardingStepCard(
-                        icon = Icons.Default.Security,
-                        title = "Classification Levels",
-                        description = "Spectre organizes these phantom signals into three distinct collection vectors:\n\n• PASSIVE: Totally invisible side-channels queryable silently without permissions.\n• RESTRICTED: Standard sandbox permission boundaries.\n• ADVANCED: Deep device fingerprinting, browser identifiers, and font hashes.",
-                        tint = CyberBlue
-                    )
-                    3 -> OnboardingStepCard(
-                        icon = Icons.Default.Visibility,
-                        title = "Offline Privacy Guarantee",
-                        description = "Spectre operates 100% locally and offline. Your hardware metrics never leave your device. By continuing, you authorize Spectre to conduct a deep spectral analysis of your system APIs.",
-                        tint = SpectrePurple
-                    )
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val width = size.width
+                val height = size.height
+                
+                // Dynamic Blob 1: Top-Right area (changes color based on step)
+                val blob1Color = when (step) {
+                    1 -> CyberGreen.copy(alpha = 0.22f)
+                    2 -> CyberBlue.copy(alpha = 0.22f)
+                    else -> SpectrePurple.copy(alpha = 0.22f)
                 }
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(blob1Color, Color.Transparent),
+                        center = Offset(width * 0.85f, height * 0.3f),
+                        radius = width * 0.7f
+                    )
+                )
+
+                // Blob 2: Bottom-Left area (complementary neon purple glow)
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(SpectrePurple.copy(alpha = 0.18f), Color.Transparent),
+                        center = Offset(width * 0.15f, height * 0.7f),
+                        radius = width * 0.75f
+                    )
+                )
             }
         }
 
-        // Bottom Controls
         Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .safeDrawingPadding()
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Indicator dots
+            // App Logo / Header
             Row(
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(bottom = 24.dp)
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 16.dp)
             ) {
-                for (i in 1..3) {
-                    Box(
-                        modifier = Modifier
-                            .padding(horizontal = 4.dp)
-                            .size(width = if (step == i) 20.dp else 8.dp, height = 8.dp)
-                            .clip(CircleShape)
-                            .background(if (step == i) SpectrePurple else CyberBorder.copy(alpha = 0.8f))
-                    )
+                SpectreLogo(
+                    modifier = Modifier.size(54.dp),
+                    color = SpectrePurple
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "SPECTRE",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Black,
+                    fontFamily = FontFamily.Monospace,
+                    color = SpectrePurple,
+                    letterSpacing = 4.sp
+                )
+            }
+
+            // Center Content with Slide Transition
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                AnimatedContent(
+                    targetState = step,
+                    transitionSpec = {
+                        if (targetState > initialState) {
+                            (slideInHorizontally { width -> width } + fadeIn()).togetherWith(
+                                slideOutHorizontally { width -> -width } + fadeOut())
+                        } else {
+                            (slideInHorizontally { width -> -width } + fadeIn()).togetherWith(
+                                slideOutHorizontally { width -> width } + fadeOut())
+                        }.using(SizeTransform(clip = false))
+                    },
+                    label = "OnboardingStep"
+                ) { currentStep ->
+                    when (currentStep) {
+                        1 -> OnboardingStepCard(
+                            hazeState = hazeState,
+                            icon = Icons.Default.Radar,
+                            title = "Analyze Telemetry & Leakage",
+                            description = "Every mobile device exposes unique hardware and software signals—such as system configurations, battery behaviors, and screen properties. Trackers compile these data points into a distinct digital signature to identify you. Spectre runs a local analysis to show you exactly what is visible.",
+                            tint = CyberGreen
+                        )
+                        2 -> OnboardingStepCard(
+                            hazeState = hazeState,
+                            icon = Icons.Default.Security,
+                            title = "Understand Risk Categories",
+                            description = "Spectre analyzes signals across three security levels:\n\n• PASSIVE: Public data accessible silently without any permissions.\n• RESTRICTED: Protected data requiring standard Android permissions.\n• ADVANCED: Deep hardware identifiers and unique browser hashes.",
+                            tint = CyberBlue
+                        )
+                        3 -> OnboardingStepCard(
+                            hazeState = hazeState,
+                            icon = Icons.Default.Shield,
+                            title = "100% Offline & Private",
+                            description = "Your privacy is our priority. All analysis runs completely on-device, offline, and locally. Absolutely no data is uploaded to any servers. Continue to scan and inspect your device's telemetry footprint.",
+                            tint = SpectrePurple
+                        )
+                    }
                 }
             }
 
-            // Navigation Buttons
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+            // Bottom Controls
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                if (step > 1) {
-                    OutlinedButton(
-                        onClick = { step-- },
-                        modifier = Modifier
-                            .height(48.dp)
-                            .weight(1f)
-                            .padding(end = 8.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = SpectrePurple
-                        ),
-                        border = BorderStroke(1.5.dp, SpectrePurple.copy(alpha = 0.3f)),
-                        shape = RoundedCornerShape(100)
-                    ) {
-                        Text("Back", fontWeight = FontWeight.Bold)
+                // Indicator dots
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(bottom = 24.dp)
+                ) {
+                    for (i in 1..3) {
+                        Box(
+                            modifier = Modifier
+                                .padding(horizontal = 4.dp)
+                                .size(width = if (step == i) 20.dp else 8.dp, height = 8.dp)
+                                .clip(CircleShape)
+                                .background(if (step == i) SpectrePurple else CyberBorder.copy(alpha = 0.8f))
+                        )
                     }
                 }
 
-                Button(
-                    onClick = {
-                        if (step < 3) {
-                            step++
-                        } else {
-                            onOnboardingComplete()
-                        }
-                    },
+                // Navigation Buttons
+                Row(
                     modifier = Modifier
-                        .height(48.dp)
-                        .weight(1f)
-                        .padding(start = if (step > 1) 8.dp else 0.dp)
-                        .testTag("onboarding_next_button"),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (step == 3) CyberGreen else SpectrePurple,
-                        contentColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(100)
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        text = if (step == 3) "Agree & Scan" else "Continue",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
-                    if (step < 3) {
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Default.ArrowForward,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
+                    if (step > 1) {
+                        OutlinedButton(
+                            onClick = { step-- },
+                            modifier = Modifier
+                                .height(48.dp)
+                                .weight(1f)
+                                .padding(end = 8.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = SpectrePurple
+                            ),
+                            border = BorderStroke(1.5.dp, SpectrePurple.copy(alpha = 0.3f)),
+                            shape = RoundedCornerShape(100)
+                        ) {
+                            Text("Back", fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            if (step < 3) {
+                                step++
+                            } else {
+                                onOnboardingComplete()
+                            }
+                        },
+                        modifier = Modifier
+                            .height(48.dp)
+                            .weight(1f)
+                            .padding(start = if (step > 1) 8.dp else 0.dp)
+                            .testTag("onboarding_next_button"),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (step == 3) CyberGreen else SpectrePurple,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(100)
+                    ) {
+                        Text(
+                            text = if (step == 3) "Agree & Scan" else "Continue",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
                         )
+                        if (step < 3) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Default.ArrowForward,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -540,24 +584,34 @@ fun OnboardingView(onOnboardingComplete: () -> Unit) {
 
 @Composable
 fun OnboardingStepCard(
+    hazeState: HazeState,
     icon: ImageVector,
     title: String,
     description: String,
     tint: Color
 ) {
-    Card(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
-        colors = CardDefaults.cardColors(containerColor = CyberCardBg),
-        border = BorderStroke(
-            width = 1.5.dp,
-            brush = Brush.linearGradient(
-                colors = listOf(tint, SpectrePurple)
+            .padding(8.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color.White.copy(alpha = 0.45f))
+            .hazeChild(
+                state = hazeState,
+                style = HazeStyle(
+                    backgroundColor = CyberDarkBg,
+                    blurRadius = 24.dp,
+                    tints = listOf(HazeTint(color = CyberDarkBg.copy(alpha = 0.25f))),
+                    noiseFactor = 0.1f
+                )
             )
-        ),
-        shape = RoundedCornerShape(topStart = 28.dp, bottomEnd = 28.dp, topEnd = 12.dp, bottomStart = 12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .border(
+                width = 1.5.dp,
+                brush = Brush.linearGradient(
+                    colors = listOf(tint.copy(alpha = 0.8f), SpectrePurple.copy(alpha = 0.8f))
+                ),
+                shape = RoundedCornerShape(24.dp)
+            )
     ) {
         Column(
             modifier = Modifier.padding(24.dp),
@@ -566,9 +620,9 @@ fun OnboardingStepCard(
             Box(
                 modifier = Modifier
                     .size(80.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(16.dp))
                     .background(tint.copy(alpha = 0.1f))
-                    .border(1.dp, tint.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
+                    .border(1.dp, tint.copy(alpha = 0.3f), RoundedCornerShape(16.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 if (icon == Icons.Default.Radar) {
