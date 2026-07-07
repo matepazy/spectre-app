@@ -58,71 +58,59 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 
 @Composable
-fun PrismLogo(
+fun SpectreLogo(
     modifier: Modifier = Modifier,
     color: Color = SpectrePurple
 ) {
     Canvas(modifier = modifier) {
-        val width = size.width
-        val height = size.height
+        val scaleX = size.width / 24f
+        val scaleY = size.height / 24f
         
-        val scaleX = width / 512f
-        val scaleY = height / 512f
-        
-        val p1 = Offset(256f * scaleX, 130f * scaleY)
-        val p2 = Offset(140f * scaleX, 340f * scaleY)
-        val p3 = Offset(372f * scaleX, 340f * scaleY)
-        val pCenter = Offset(256f * scaleX, 235f * scaleY)
-        val pBottom = Offset(256f * scaleX, 340f * scaleY)
-        
-        val strokePoly = 14f * scaleX
-        val strokeThin = 8f * scaleX
-        val strokeThick = 10f * scaleX
-        
-        val path = Path().apply {
-            moveTo(p1.x, p1.y)
-            lineTo(p2.x, p2.y)
-            lineTo(p3.x, p3.y)
+        val ghostPath = Path().apply {
+            moveTo(12f * scaleX, 2f * scaleY)
+            arcTo(
+                rect = androidx.compose.ui.geometry.Rect(4f * scaleX, 2f * scaleY, 20f * scaleX, 18f * scaleY),
+                startAngleDegrees = 270f,
+                sweepAngleDegrees = -90f,
+                forceMoveTo = false
+            )
+            lineTo(4f * scaleX, 22f * scaleY)
+            lineTo(7f * scaleX, 19f * scaleY)
+            lineTo(9.5f * scaleX, 21.5f * scaleY)
+            lineTo(12f * scaleX, 19f * scaleY)
+            lineTo(14.5f * scaleX, 21.5f * scaleY)
+            lineTo(17f * scaleX, 19f * scaleY)
+            lineTo(20f * scaleX, 22f * scaleY)
+            lineTo(20f * scaleX, 10f * scaleY)
+            arcTo(
+                rect = androidx.compose.ui.geometry.Rect(4f * scaleX, 2f * scaleY, 20f * scaleX, 18f * scaleY),
+                startAngleDegrees = 0f,
+                sweepAngleDegrees = -90f,
+                forceMoveTo = false
+            )
             close()
         }
+        
         drawPath(
-            path = path,
+            path = ghostPath,
             color = color,
             style = Stroke(
-                width = strokePoly,
+                width = 2.3f * scaleX,
+                cap = StrokeCap.Round,
                 join = StrokeJoin.Round
             )
         )
         
-        drawLine(
+        drawCircle(
             color = color,
-            start = p1,
-            end = pBottom,
-            strokeWidth = strokeThin,
-            alpha = 0.4f
+            radius = 1.15f * scaleX,
+            center = Offset(9f * scaleX, 10f * scaleY)
         )
         
-        drawLine(
+        drawCircle(
             color = color,
-            start = p2,
-            end = pCenter,
-            strokeWidth = strokeThin,
-            alpha = 0.4f
-        )
-        
-        drawLine(
-            color = color,
-            start = p3,
-            end = pCenter,
-            strokeWidth = strokeThin,
-            alpha = 0.4f
-        )
-        
-        drawLine(
-            color = color,
-            start = p1,
-            end = pCenter,
-            strokeWidth = strokeThick
+            radius = 1.15f * scaleX,
+            center = Offset(15f * scaleX, 10f * scaleY)
         )
     }
 }
@@ -400,7 +388,7 @@ fun OnboardingView(onOnboardingComplete: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(top = 16.dp)
         ) {
-            PrismLogo(
+            SpectreLogo(
                 modifier = Modifier.size(54.dp),
                 color = SpectrePurple
             )
@@ -575,7 +563,7 @@ fun OnboardingStepCard(
                 contentAlignment = Alignment.Center
             ) {
                 if (icon == Icons.Default.Radar) {
-                    PrismLogo(
+                    SpectreLogo(
                         modifier = Modifier.size(54.dp),
                         color = tint
                     )
@@ -660,7 +648,7 @@ fun HomeView(
                 TopAppBar(
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            PrismLogo(
+                            SpectreLogo(
                                 modifier = Modifier.size(36.dp),
                                 color = SpectrePurple
                             )
