@@ -443,12 +443,11 @@ fun OnboardingView(onOnboardingComplete: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "SPECTRE",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Black,
-                    fontFamily = FontFamily.Monospace,
-                    color = SpectrePurple,
-                    letterSpacing = 4.sp
+                    text = "Spectre",
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.SansSerif,
+                    color = CyberTextPrimary
                 )
             }
 
@@ -723,12 +722,11 @@ fun HomeView(
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                text = "SPECTRE",
-                                fontWeight = FontWeight.Black,
-                                fontFamily = FontFamily.Monospace,
-                                color = SpectrePurple,
-                                letterSpacing = 2.sp,
-                                fontSize = 20.sp
+                                text = "Spectre",
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.SansSerif,
+                                color = CyberTextPrimary,
+                                fontSize = 24.sp
                             )
                         }
                     },
