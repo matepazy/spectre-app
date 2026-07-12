@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
+    <defs>
+        <linearGradient id="bg-gradient" x1="0" y1="108" x2="108" y2="0" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#6D28D9" />
+            <stop offset="100%" stop-color="#F5F4FA" />
+        </linearGradient>
+    </defs>
+    
+    <!-- Background Layer -->
+    <rect width="108" height="108" rx="24" fill="url(#bg-gradient)" />
+    
+    <!-- Foreground Icon (Ghost) -->
+    <g transform="translate(54, 54) scale(2.6) translate(-12, -12)" 
+       stroke="#FFFFFF" 
+       stroke-width="2.3" 
+       stroke-linecap="round" 
+       stroke-linejoin="round" 
+       fill="none">
+        <!-- Ghost Body -->
+        <path d="M12,2a8,8 0 0,0 -8,8v12l3,-3 2.5,2.5L12,19l2.5,2.5L17,19l3,3V10a8,8 0 0,0 -8,-8z" />
+        <!-- Eye 1 -->
+        <path d="M9,10h0.01" />
+        <!-- Eye 2 -->
+        <path d="M15,10h0.01" />
+    </g>
+</svg>

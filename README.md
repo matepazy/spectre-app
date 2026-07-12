@@ -1,5 +1,9 @@
 # 👻 Spectre
 
+<p align="center">
+  <img src="icons/logo-bg.svg" alt="Spectre Logo" width="200" />
+</p>
+
 **Spectre** is a diagnostic and forensic tool for Android designed to showcase and analyze the vast landscape of device characteristics, identifiers, build parameters, sensor telemetry, and hardware fingerprints that apps can read.
 
 Inspired by the acclaimed iOS application **[Loupe](https://github.com/mysk-research/loupe)**, Spectre exposes how device fingerprints are constructed and evaluates potential privacy leakage across different Android versions.
