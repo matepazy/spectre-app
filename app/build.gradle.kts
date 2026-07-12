@@ -1,4 +1,5 @@
 import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
+import java.util.Properties
 
 plugins {
   alias(libs.plugins.android.application)
@@ -9,6 +10,19 @@ plugins {
   alias(libs.plugins.google.services)
 }
 
+val env = Properties().apply {
+  val envFile = rootProject.file(".env")
+  if (envFile.exists()) {
+    envFile.inputStream().use { load(it) }
+  } else {
+    val exampleFile = rootProject.file(".env.example")
+    if (exampleFile.exists()) {
+      exampleFile.inputStream().use { load(it) }
+    }
+  }
+}
+val envVersionName = env.getProperty("VERSION_NAME")?.takeIf { it.isNotEmpty() } ?: "1.2.0"
+
 android {
   namespace = "com.matepazy.spectre"
   compileSdk = 37
@@ -18,7 +32,7 @@ android {
     minSdk = 24
     targetSdk = 37
     versionCode = 1
-    versionName = "1.2.0"
+    versionName = envVersionName
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -108,7 +122,6 @@ dependencies {
   implementation(libs.androidx.room.runtime)
   // implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
-  implementation(libs.firebase.ai)
   implementation(libs.firebase.appcheck.recaptcha)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)

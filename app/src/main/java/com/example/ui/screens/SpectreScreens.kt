@@ -2119,7 +2119,7 @@ fun AboutView(
             )
 
             Text(
-                text = "v1.2.0",
+                text = "v${com.matepazy.spectre.BuildConfig.VERSION_NAME}",
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace,
                 color = CyberTextSecondary

@@ -2,5 +2,5 @@
   "name": "Spectre",
   "description": "Spectre is a privacy-awareness utility that scans system APIs to expose hidden hardware fingerprinting and telemetry tracking vectors on your device.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": []
 }

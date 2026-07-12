@@ -8,7 +8,6 @@ Inspired by the acclaimed iOS application **[Loupe](https://github.com/mysk-rese
 
 ## 💡 Origin & Inspiration
 * **iOS Inspiration**: This application is heavily inspired by **Loupe** by Mysk Research. While Loupe demonstrates the richness of device signals available on iOS, **Spectre** translates this concept to the diverse, fragmented ecosystem of Android, highlighting build parameters, system services, and hardware characteristics.
-* **AI Assistance**: Parts of this application were designed and implemented with the assistance of **Gemini 3.5 Flash**.
 
 ---
 
