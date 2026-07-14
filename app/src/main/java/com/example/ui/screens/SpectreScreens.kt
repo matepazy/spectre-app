@@ -234,12 +234,10 @@ fun LockScreen(onUnlockSuccess: () -> Unit) {
             Spacer(modifier = Modifier.height(28.dp))
 
             Text(
-                text = "SPECTRE SECURED",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Black,
-                fontFamily = FontFamily.Monospace,
-                color = CyberTextPrimary,
-                letterSpacing = 2.sp
+                text = "Spectre Locked",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = CyberTextPrimary
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -259,10 +257,9 @@ fun LockScreen(onUnlockSuccess: () -> Unit) {
                     text = "Status: $errorMessage",
                     fontSize = 12.sp,
                     color = CyberRed,
-                    fontFamily = FontFamily.Monospace,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
-                        .background(CyberRed.copy(alpha = 0.08f), RoundedCornerShape(6.dp))
+                        .background(CyberRed.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 )
             }
@@ -289,7 +286,7 @@ fun LockScreen(onUnlockSuccess: () -> Unit) {
                         tint = Color.White
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Decrypt Database", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("Unlock with Biometrics", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             } else {
                 Column(
@@ -302,11 +299,10 @@ fun LockScreen(onUnlockSuccess: () -> Unit) {
                         .padding(16.dp)
                 ) {
                     Text(
-                        text = "ENVIRONMENT SIMULATION MODE",
-                        fontSize = 11.sp,
+                        text = "Biometrics Unavailable",
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = CyberOrange,
-                        fontFamily = FontFamily.Monospace
+                        color = CyberOrange
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -324,7 +320,7 @@ fun LockScreen(onUnlockSuccess: () -> Unit) {
                     ) {
                         Icon(imageVector = Icons.Default.Verified, contentDescription = null, tint = Color.White)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Simulate Unlock", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("Bypass Authentication", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -608,10 +604,8 @@ fun OnboardingStepCard(
                 )
             )
             .border(
-                width = 1.5.dp,
-                brush = Brush.linearGradient(
-                    colors = listOf(tint.copy(alpha = 0.8f), SpectrePurple.copy(alpha = 0.8f))
-                ),
+                width = 1.dp,
+                color = tint.copy(alpha = 0.4f),
                 shape = RoundedCornerShape(24.dp)
             )
     ) {
@@ -868,14 +862,13 @@ fun HomeView(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Scanning Ghostly Tracking Vectors...",
+                            text = "Analyzing Device Signals...",
                             color = SpectrePurple,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace
+                            fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Mapping invisible side-channel signatures",
+                            text = "Reading system and hardware characteristics...",
                             color = CyberTextSecondary,
                             fontSize = 12.sp
                         )
@@ -1047,12 +1040,6 @@ fun HomeView(
 // -------------------------------------------------------------------------
 @Composable
 fun ScanSummaryCard(inference: com.matepazy.spectre.support.InferenceResult, signals: List<FingerprintSignal>) {
-    val borderBrush = remember {
-        Brush.linearGradient(
-            colors = listOf(SpectrePurple, CyberBlue)
-        )
-    }
-
     val passiveCount = signals.count { it.category == SignalCategory.PASSIVE && it.rawValue != "Permission Blocked" && it.rawValue.isNotEmpty() }
     val permissionCount = signals.count { it.category == SignalCategory.NEEDS_PERMISSION && it.rawValue != "Permission Blocked" && it.rawValue.isNotEmpty() }
     val advancedCount = signals.count { it.category == SignalCategory.ADVANCED && it.rawValue != "Permission Blocked" && it.rawValue.isNotEmpty() }
@@ -1062,8 +1049,8 @@ fun ScanSummaryCard(inference: com.matepazy.spectre.support.InferenceResult, sig
             .fillMaxWidth()
             .padding(top = 8.dp),
         colors = CardDefaults.cardColors(containerColor = CyberCardBg),
-        border = BorderStroke(1.5.dp, borderBrush),
-        shape = RoundedCornerShape(topEnd = 24.dp, bottomStart = 24.dp, topStart = 8.dp, bottomEnd = 8.dp)
+        border = BorderStroke(1.dp, CyberBorder),
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
             Row(
@@ -1093,8 +1080,7 @@ fun ScanSummaryCard(inference: com.matepazy.spectre.support.InferenceResult, sig
                         text = "Device Signature ID",
                         fontSize = 12.sp,
                         color = CyberTextSecondary,
-                        fontWeight = FontWeight.SemiBold,
-                        fontFamily = FontFamily.Monospace
+                        fontWeight = FontWeight.SemiBold
                     )
                     
                     val clipboard = LocalClipboardManager.current
@@ -1132,11 +1118,10 @@ fun ScanSummaryCard(inference: com.matepazy.spectre.support.InferenceResult, sig
             )
 
             Text(
-                text = "Active Data Collection Vectors:",
+                text = "Collected Device Signals:",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 color = CyberBlue,
-                fontFamily = FontFamily.Monospace,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
@@ -1389,178 +1374,178 @@ private fun getSignalIcon(id: String): ImageVector {
 private fun getTrackingRiskExplanation(signal: FingerprintSignal): String {
     return when (signal.id) {
         "accessibility_enabled" -> {
-            "Accessibility services have full view of your screen, keyboard inputs, and on-screen clicks. If an unauthorized background app or malicious SDK monitors enabled services, it can log typed text (passwords, PINs, or emails) and automate fake gestures to execute ad fraud or transfer funds without consent."
+            "Accessibility services have deep visibility into user interface interactions. Trackers can check if this is enabled to identify custom device access setups."
         }
         "accessibility_touch_exploration" -> {
-            "Touch exploration indicates that speech assistance (like TalkBack) is active. Tracking this can identify visually-impaired or elderly user profiles, allowing malicious platforms to serve targeted phishing campaigns tailored to exploit specific accessibility flows."
+            "Touch exploration indicates if speech feedback (like TalkBack) is active, which tells trackers if the user relies on visual assistance tools."
         }
         "accessibility_font_scale" -> {
-            "A customized font scale (e.g. 1.22x or 0.85x) narrows down the anonymity set of a device to a fraction of a percent of global web traffic, making web browser tracking extremely easy even when IP tracking is blocked."
+            "Custom font scales help distinguish your device viewport size, narrowing down the anonymity set for browser fingerprinting."
         }
         "accessibility_running_services" -> {
-            "Specific running accessibility helper names allow trackers to identify exact utility or security apps you use. Malware can use this to disable screen overlays, target security tools, or prepare tailor-made accessibility overlay attacks."
+            "Knowing specific active accessibility services helps trackers identify helper utilities or custom tools installed on the device."
         }
         "app_target_sdk" -> {
-            "Malicious applications target old SDK versions (e.g. Android 9 or below) intentionally to completely bypass modern Android permission gates, scoped storage rules, and hardware sandboxing layers."
+            "Older target SDK levels can bypass modern privacy features (like scoped storage or runtime permission prompts) on newer Android releases."
         }
         "app_installer_source" -> {
-            "Knowing if an app was installed via official stores (Google Play) or sideloaded (APK) lets trackers detect developer configurations, vulnerability testers, or non-technical profiles who might be more vulnerable to targeted social engineering attacks."
+            "The installer source indicates whether the app was installed from an official store or sideloaded via an APK."
         }
         "installed_apps_sidechannel" -> {
-            "Scanning installed applications (such as dating, financial, religious, medical, or political apps) leaks intimate personal details about your lifestyle, health, beliefs, and net worth. Advertisers compile this 'app footprint' into a persistent profile to track you across different websites and apps."
+            "Querying installed package names allows trackers to compile a list of your apps, revealing personal interests and demographics."
         }
         "audio_output_routes" -> {
-            "Active audio peripheral routes (like wired headsets vs speakerphone) reveal when a user is actively on a phone call or listening to music, which is exploited by trackers to run context-aware ads or check physical device presence."
+            "Active audio output routes (e.g., Bluetooth, headphones, speaker) indicate if you are currently using audio accessories."
         }
         "audio_music_volume" -> {
-            "Monitoring system volume levels allows apps to detect when you are actively using the device or ignoring notifications, optimizing intrusive background ads or detecting silent user-away states."
+            "System volume levels can be checked by applications to determine active user interaction or audio profile preferences."
         }
         "battery_level" -> {
-            "Battery level changes are highly granular and update constantly. Advertisers query the precise rate of battery draining to link multiple open web browser tabs or distinct apps to the exact same device, effectively bypassing all browser cookie blocks."
+            "Granular battery level changes can be tracked in real-time, helping trackers link web browser tabs and app sessions on the same device."
         }
         "battery_health_temp" -> {
-            "Battery temperature and physical health status expose hardware wear. Trackers use this distinct hardware decay signature to identify your device even after complete factory resets or app reinstalls."
+            "Battery temperature and charge cycle statistics expose minor hardware variances and battery wear characteristics."
         }
         "battery_charge_capacity" -> {
-            "The physical maximum charge capacity of the battery is highly unique due to manufacturing variations, acting as a permanent hardware identifier that cannot be changed by clearing application caches."
+            "The maximum charge capacity of the battery is a physical characteristic that varies slightly by device, serving as a soft hardware marker."
         }
         "battery_source" -> {
-            "Identifying if you are plugged into USB, AC, or Wireless reveals your physical location context (at a desk, in a car, or in bed) and charging habits, enabling highly context-targeted advertising and behavior modeling."
+            "Knowing if the device is charging via USB, AC, or wireless details the power source context and typical charging routines."
         }
         "bluetooth_hardware_status" -> {
-            "Determining whether Bluetooth is enabled allows background tracking SDKs to prompt you for local beacon scanning or silently monitor your proximity to commercial Bluetooth beacons in physical stores."
+            "Checking whether Bluetooth is enabled allows background libraries to prepare for beacon or peripheral scanning."
         }
         "bluetooth_bonded_devices" -> {
-            "The list of paired Bluetooth devices (smart watches, car audio, smart TVs, or home speakers) is unique to you. Because these device names and MAC addresses do not change, tracking bonded Bluetooth devices creates an un-resettable geographic and hardware anchor of your identity."
+            "The list of paired Bluetooth device names and MAC addresses is unique to you, creating a persistent identifier that survives app resets."
         }
         "calendar_exposure_count" -> {
-            "Exposing calendar event density lets trackers trace your schedule patterns and detect when you are traveling, busy, or asleep, helping malicious networks time highly target-specific scams or ads."
+            "Accessing calendar metadata (like event density) allows applications to infer user activity patterns and schedules."
         }
         "camera_hardware_specs" -> {
-            "Camera sensor data details precise optical dimensions, aperture sizes, and lens counts. Trackers combine these physical camera specifications to build a distinct hardware signature that cannot be altered or reset."
+            "Detailed camera lens specifications, focal lengths, and aperture sizes form a unique physical signature of the camera hardware."
         }
         "camera_runtime_access" -> {
-            "Camera runtime permission grants background streams the ability to capture photos or video. Unauthorized apps can exploit this to perform ambient environment mapping or build visual facial signatures without your explicit active awareness."
+            "Camera permissions allow capturing photos or video. Apps must be restricted to prevent unauthorized camera usage."
         }
         "contacts_exposure_threshold" -> {
-            "Contacts list access gives standard apps full names, personal phone numbers, emails, and physical addresses of everyone you know. Trackers compile this social graph into giant shadow-profile databases, leaking the privacy of your family and friends."
+            "Access to the contacts registry exposes personal names, numbers, and emails, allowing apps to map social connections."
         }
         "system_hardware_tags" -> {
-            "Standard build fingerprints (bootloader version, build ID, kernel version) are shared among identical phone batches. While not completely unique, compiling 10+ hardware attributes restricts the search domain to a tiny pool, making device tracking across the web highly precise."
+            "Hardware build tags (like bootloader, kernel version, and build fingerprint) help narrow down the exact device model and update status."
         }
         "system_uptime_precision" -> {
-            "Uptime tracks the exact millisecond your device booted up. Because no two devices boot up at the exact same millisecond, subtracting uptime from current calendar time generates a perfect, un-spoofable session ID that links your activity across different apps."
+            "System uptime tracks the millisecond the device booted. Because boot times are highly specific, it can act as a temporary session identifier."
         }
         "system_security_patch" -> {
-            "Knowing your exact OS security patch date lets malicious apps map out known, unpatched software vulnerabilities on your device, allowing targeted exploit delivery or remote code executions."
+            "The security patch level reveals the date of the last security update, which apps use to check for patch status."
         }
         "system_kernel_version" -> {
-            "Your specific OS kernel compilation signature is unique to your exact software build, letting cross-app trackers correlate browser and app data easily to build a persistent device profile."
+            "The kernel compilation date and version identify the exact software build of the operating system."
         }
         "sensor_accelerometer_signature" -> {
-            "Motion sensors are accessible without permissions. Because every accelerometer has minute manufacturing defects, it generates slightly biased noise patterns that are completely unique to your phone. Research shows that malicious web scripts can use this noise to keylog keystrokes on your keyboard or track your walking gait."
+            "Accelerometer sensor data contains minute manufacturing noise, which can potentially be used as a physical device signature."
         }
         "sensor_gyro_spec" -> {
-            "Detailed gyroscope performance characteristics expose your movement patterns, which malicious scripts use to reconstruct your walking speed, physical posture, or keyboard keystrokes without requiring standard permission gates."
+            "Gyroscope sensor specifications and noise patterns reveal detailed hardware characteristics and motion patterns."
         }
         "sensor_magnetometer_barometer" -> {
-            "Magnetometer and barometer values leak precise physical compass orientations and atmospheric pressure changes, revealing your exact building floor, altitude, and physical movements."
+            "Magnetometer and barometer readings leak physical orientation relative to magnetic north and altitude changes."
         }
         "display_resolution_dpi" -> {
-            "Exact screen pixel dimensions, refresh rates, and display density reveal the specific physical chassis. It is combined with other viewport settings to construct a persistent canvas fingerprint to track you across browser sessions."
+            "Screen resolution, density (DPI), and refresh rate define the physical display, forming a primary marker for canvas fingerprinting."
         }
         "display_orientation_state" -> {
-            "Real-time screen rotation leaks when you flip your phone. Trackers analyze this physical action to confirm user presence, optimize high-conversion video ads, or detect if the device is laying flat on a desk."
+            "The screen orientation state shows whether the device is in portrait or landscape mode, confirming user viewport layout."
         }
         "fonts_system_inventory" -> {
-            "Custom system fonts loaded onto your device are highly unique. Listing all available font files allows web trackers to distinguish your browser from millions of other devices with almost 99% accuracy."
+            "The list of custom system fonts can be compiled by applications to build a highly distinct browser and device fingerprint."
         }
         "network_transport_type" -> {
-            "Exposing whether you are on Wi-Fi or Cellular reveals your connection stability and medium, which trackers use to tailor bandwidth-heavy video advertising or detect when you are traveling."
+            "Exposing whether the active network is Wi-Fi or cellular helps trackers identify connection medium and stability."
         }
         "network_carrier_name" -> {
-            "Your carrier name exposes your home country and cellular subscription level, enabling trackers to profile your geographic location, carrier tier, and spending demographics."
+            "The carrier operator name details your network provider, exposing home country and network demographics."
         }
         "locale_language_tags" -> {
-            "Standard language and timezone settings immediately narrow down your geographical continent, country, and language demographic, enabling broad-scale demographic profiling."
+            "Language settings immediately define the user's primary spoken language and region configuration."
         }
         "locale_timezone_id" -> {
-            "Timezone information narrows down your geographical continent and country, assisting trackers in mapping your daily active hours, sleep schedule, and general location."
+            "The timezone ID maps the device's general geographic location and current local time offset."
         }
         "pasteboard_status" -> {
-            "The clipboard is a global area accessible to all foreground apps. Because users frequently copy passwords, authentication codes, addresses, and credit card numbers, background scripts automatically query the clipboard to steal highly sensitive credentials."
+            "The system clipboard stores copied text and media, which unauthorized apps could read to access sensitive copied data."
         }
         "storage_capacity_metrics" -> {
-            "The exact maximum and free storage byte counts reflect your specific disk partition, creating a volatile but highly custom metric. When polled repeatedly, storage capacity becomes a key correlation factor."
+            "Storage capacity and available disk space metrics provide partition details that help distinguish device storage builds."
         }
         "webview_user_agent" -> {
-            "User-Agents detail the exact firmware compile version, safari build, and engine update. Trackers use it as the main header to recognize and track you across the web, regardless of whether you clear cookies or use private browser tabs."
+            "WebViews expose the User-Agent header, detailing browser versions and operating system builds to websites."
         }
         "webview_javascript_engine" -> {
-            "JavaScript engine properties reveal specific rendering capabilities. Trackers combine these execution times to build a distinct browser fingerprint to track you across private browsing sessions."
+            "JavaScript engine capabilities and feature availability are used to distinguish browser configurations."
         }
         "location_exposure_status" -> {
-            "Precise geographical coordinates pin down your home address, medical clinic visits, workplace, and personal habits. Location trackers continuously record your coordinates, exposing you to active tracking, physical stalking, and geofencing ad profiles."
+            "Geographical coordinates track your physical location, allowing apps to determine your precise address and movements."
         }
         "microphone_runtime_access" -> {
-            "Microphone access allows standard apps to record and analyze audio in the background. It is exploited by bad actors to build voice profiles, detect ambient environments, or process keyword triggers to target advertising based on real-world conversations."
+            "Microphone access allows recording audio. Unauthorized access can lead to ambient conversation recording."
         }
         "drm_widevine_system_id" -> {
-            "The Widevine DRM Device Unique ID is cryptographically burned into your hardware chip. Since it cannot be cleared by factory resets, app reinstalls, or software updates, any app reading it has a permanent, lifetime tracker of your physical device."
+            "The Widevine DRM Device ID is a cryptographic hardware key that remains permanent across factory resets and updates."
         }
         "phone_state_access" -> {
-            "The READ_PHONE_STATE permission grants access to persistent device numbers like SIM serials and IMEIs. This allows standard applications to instantly identify you and link your phone number, service plan, and identity to advertiser databases."
+            "Phone state permissions grant access to SIM serial numbers and phone numbers, allowing direct identification of the subscriber."
         }
         "call_log_exposure" -> {
-            "Exposing call history logs allows advertising and data brokering SDKs to trace everyone you call, the time of calls, and conversation durations, reconstructing your entire private professional and social network."
+            "Call log access exposes your history of incoming and outgoing calls, detailing phone numbers and call durations."
         }
         "sms_exposure_status" -> {
-            "Exposing text message databases allows apps to read highly confidential information like single-use 2FA login codes, bank transaction amounts, shipping track links, and personal chats."
+            "SMS access exposes incoming text messages, which could contain private conversations and verification codes."
         }
         "system_accounts_list" -> {
-            "Exposing registered accounts tells standard apps the list of accounts linked to your device (e.g. Gmail, Outlook, Spotify). It reveals your email addresses, letting cross-app trackers instantly tie your anonymous browsing data to your real-world identity."
+            "The accounts list reveals the registered account names (like Google or email accounts) configured on the device."
         }
         "body_sensors_tracking" -> {
-            "Body sensors record delicate biometric inputs like continuous heart rate. Access to this data is highly sensitive and is actively bought by insurance companies and health profiles to track user physical activity, heart abnormalities, and health metrics."
+            "Body sensor access exposes personal biometric telemetry, such as heart rate, collected by wearable or health devices."
         }
         "notification_post_permission" -> {
-            "Spamware uses notification permissions to spam click-bait ads, bypass battery restrictions by keeping services alive, and manipulate user attention, constantly recording when you interact with notifications to profile your active hours."
+            "Notification permissions allow apps to display alerts. Restricting it prevents unwanted background notifications."
         }
         "hardware_sensors_footprint" -> {
-            "Every phone has a distinct combination of sensors (accelerometer, gyroscope, barometer) from various manufacturers. Polling the full list of installed sensors creates a highly unique hardware signature requiring zero permissions."
+            "Listing all hardware sensors installed on the device creates a distinct hardware configuration profile."
         }
         "system_settings_leak" -> {
-            "Your customized system settings (timeout duration, custom brightness, haptic toggles) reveal highly personal preference states. Because they are readable without any permission, they serve as easy fingerprinting markers."
+            "System settings (like screen timeout or haptic feedback toggles) expose user personalization preferences."
         }
         "device_uptime_metrics" -> {
-            "Uptime tracks the exact millisecond your device booted up. Because no two devices boot up at the exact same millisecond, subtracting uptime from current calendar time generates a perfect, un-spoofable session ID that links your activity across different apps."
+            "Device uptime tracks the duration since the last system boot, serving as a soft correlation signal."
         }
         "opengl_version_sig" -> {
-            "Identifying your OpenGL version and GPU specifications details the exact graphic driver build. It is combined with canvas rendering to construct highly robust GPU profiles for persistent web-tracking."
+            "OpenGL and GPU specifications detail the device's graphic capabilities, used to build visual rendering signatures."
         }
         "network_interfaces_signature" -> {
-            "Scanning local network adapters (e.g., wlan0, rmnet_data) reveals your precise connection medium. Importantly, checking for active virtual tunnel adapters (tun0) immediately flags if you use a VPN, letting trackers bypass VPN masking or flag your traffic."
+            "Listing network adapters (such as Wi-Fi or cellular interfaces) flags VPN usage and active interface configurations."
         }
         "telephony_carrier_operator" -> {
-            "Querying carrier details exposes your service provider and country registration without needing GPS permissions. This information is leveraged to serve country-restricted advertisements, profile spending capabilities based on high-end vs low-end carriers, and tracking cross-border roaming."
+            "Telephony details reveal country code (MCC) and network code (MNC), identifying the cellular subscription context."
         }
         "cpu_ram_specs" -> {
-            "CPU architecture and exact memory limits let advertisers pinpoint hardware tiers, grouping similar device batches together to bypass simple cookie-based profiling."
+            "The processor architecture, number of CPU cores, and total RAM capacity define the device's hardware performance level."
         }
         "wifi_network_details" -> {
-            "Querying connected WiFi router MAC addresses allows lookup against global BSSID mapping databases, pinning your absolute location within meters without active GPS."
+            "WiFi metadata, such as BSSID and SSID, can be lookup-mapped to resolve the physical location of the wireless access point."
         }
         "activity_motion_tracking" -> {
-            "Real-time step counts and physical movement profiles indicate your habits, fitness levels, active commute times, and daily schedules."
+            "Physical activity permissions track movement patterns like walking, running, or driving for fitness tracking."
         }
         "ambient_sensors_footprint" -> {
-            "Ambient light lux and proximity sensors require zero permissions. Tracking them lets background trackers identify when your phone is in a pocket, a purse, or being actively held."
+            "Ambient light and proximity sensors detect real-time light levels and physical proximity to objects without requiring permissions."
         }
         "anti_analysis_signals" -> {
-            "Tracking SDKs run emulator, root, and sandbox heuristics to check if the app is monitored by security analysts, hiding their real behavior when tested."
+            "Anti-analysis checks verify if the app is running in an emulator or debugging sandbox, used by apps to detect security audits."
         }
         "input_method_package_list" -> {
-            "The combination of enabled keyboard layouts and customized IME dictionary languages restricts your anonymity pool to a tiny fraction of global devices."
+            "Enabled input methods and custom keyboard languages narrow down user localization and typing configurations."
         }
         "nfc_usb_hardware_state" -> {
             "NFC and USB status exposes physical accessory attachments or developer ADB bridge debugging modes, mapping user technical proficiency levels."
@@ -1572,10 +1557,10 @@ private fun getTrackingRiskExplanation(signal: FingerprintSignal): String {
             "Bluetooth scan allows background SDKs to detect localized BLE beacons in physical retail stores, tracking your path through aisles and stores."
         }
         "external_media_specs" -> {
-            "Public photo count, filenames, and Exif metadata provide precise location tags, camera sensor calibration offsets, and private daily activity counts."
+            "Access to external media reveals public photo files, metadata, and storage directories."
         }
         else -> {
-            "This signal is queryable by applications and web scripts. Even small, seemingly harmless details are aggregated using advanced profiling algorithms to construct a unique fingerprint, removing your online anonymity."
+            "This device characteristic is queryable by standard applications and can be combined to build a soft device fingerprint."
         }
     }
 }
@@ -1729,11 +1714,10 @@ fun SignalRowView(
                 )
 
                 Text(
-                    text = "Why This Tracking Is Dangerous:",
+                    text = "Privacy Implications",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = CyberRed,
-                    fontFamily = FontFamily.Monospace
+                    color = CyberBlue
                 )
                 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -1748,11 +1732,10 @@ fun SignalRowView(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "Raw Signal Value:",
+                    text = "Raw Value",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = CyberBlue,
-                    fontFamily = FontFamily.Monospace
+                    color = CyberTextSecondary
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -1836,7 +1819,7 @@ fun PermissionGateView(
             .padding(16.dp),
         colors = CardDefaults.cardColors(containerColor = CyberCardBg),
         border = BorderStroke(1.dp, CyberBorder),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1848,7 +1831,7 @@ fun PermissionGateView(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Permission Sandbox Gates",
+                    text = "System Permissions",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = CyberTextPrimary
@@ -1858,7 +1841,7 @@ fun PermissionGateView(
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "In order to demonstrate how advertising software reads restricted variables, Spectre needs access to these permission categories. All data remains strictly local on your device.",
+                text = "To demonstrate how applications query restricted device data, Spectre can check these system permissions. All data remains strictly local on your device.",
                 fontSize = 13.sp,
                 color = CyberTextSecondary,
                 lineHeight = 18.sp
@@ -1898,11 +1881,10 @@ fun PermissionGateView(
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = if (granted) "UNLOCKED" else "SECURE",
+                            text = if (granted) "GRANTED" else "NOT GRANTED",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (granted) CyberGreen else CyberRed,
-                            fontFamily = FontFamily.Monospace
+                            color = if (granted) CyberGreen else CyberRed
                         )
                     }
                 }
@@ -1977,12 +1959,12 @@ fun ExportView(
     val plainReport = remember(signals) {
         val sb = java.lang.StringBuilder()
         sb.append("=========================================\n")
-        sb.append("SPECTRE: SYSTEM COGNIZANCE COLLECTIBLE VECTORS REPORT\n")
+        sb.append("SPECTRE: DEVICE DIAGNOSTIC AND PRIVACY REPORT\n")
         sb.append("Generated local time: 2026-07-05\n")
         sb.append("=========================================\n")
         sb.append("Fingerprint Hash (SHA-256): ${inference.deviceSignature}\n")
         sb.append("Collectible Parameters Scanned: ${signals.size}\n\n")
-        sb.append("SYSTEM COGNIZANCE VECTORS AUDITED:\n")
+        sb.append("AUDITED DEVICE SIGNALS:\n")
         
         signals.forEach { sig ->
             sb.append("- [${sig.category.title}] ${sig.name} : ${sig.rawValue}\n")
@@ -1998,7 +1980,7 @@ fun ExportView(
             .wrapContentHeight(),
         colors = CardDefaults.cardColors(containerColor = CyberCardBg),
         border = BorderStroke(1.dp, CyberBorder),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -2138,7 +2120,7 @@ fun AboutView(
             .wrapContentHeight(),
         colors = CardDefaults.cardColors(containerColor = CyberCardBg),
         border = BorderStroke(1.dp, CyberBorder),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -2189,10 +2171,9 @@ fun AboutView(
             HorizontalDivider(color = CyberBorder, modifier = Modifier.padding(bottom = 12.dp))
 
             Text(
-                text = "SECURITY LOCKDOWN",
-                fontSize = 11.sp,
+                text = "App Security",
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Monospace,
                 color = CyberTextSecondary,
                 modifier = Modifier.align(Alignment.Start)
             )
@@ -2248,10 +2229,9 @@ fun AboutView(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "UPDATES & SYSTEM",
-                fontSize = 11.sp,
+                text = "Updates & Version Check",
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Monospace,
                 color = CyberTextSecondary,
                 modifier = Modifier.align(Alignment.Start)
             )
@@ -2526,11 +2506,10 @@ fun DetailedRegistryView(
                         color = CyberTextPrimary
                     )
                     Text(
-                        text = signal.category.title + " Vector",
+                        text = signal.category.title + " Signal",
                         fontSize = 11.sp,
                         color = categoryColor,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace
+                        fontWeight = FontWeight.Bold
                     )
                 }
 
@@ -2590,11 +2569,10 @@ fun DetailedRegistryView(
                         ) {
                             Column(modifier = Modifier.padding(14.dp)) {
                                 Text(
-                                    text = "Raw Registry Value",
+                                    text = "Raw Value",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = CyberBlue,
-                                    fontFamily = FontFamily.Monospace
+                                    color = CyberTextSecondary
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Row(
@@ -2635,11 +2613,10 @@ fun DetailedRegistryView(
                             }
                             
                             Text(
-                                text = (group.categoryName ?: "").uppercase(),
-                                fontSize = 11.sp,
+                                text = group.categoryName ?: "",
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = CyberBlue,
-                                fontFamily = FontFamily.Monospace,
                                 modifier = Modifier.padding(bottom = 6.dp)
                             )
 
@@ -2648,7 +2625,7 @@ fun DetailedRegistryView(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(containerColor = CyberBorder.copy(alpha = 0.2f)),
                                 border = BorderStroke(1.dp, CyberBorder),
-                                shape = RoundedCornerShape(14.dp)
+                                shape = RoundedCornerShape(12.dp)
                             ) {
                                 Column {
                                     group.items.forEachIndexed { idx, item ->
