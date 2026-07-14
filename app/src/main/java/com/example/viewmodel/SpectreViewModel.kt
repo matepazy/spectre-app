@@ -256,4 +256,40 @@ class SpectreViewModel : ViewModel() {
             }
         }
     }
+
+    private var autoRefreshJob: kotlinx.coroutines.Job? = null
+
+    fun startAutoRefresh(context: Context) {
+        if (autoRefreshJob != null) return
+        val appContext = context.applicationContext
+        autoRefreshJob = viewModelScope.launch(Dispatchers.IO) {
+            while (true) {
+                delay(2000)
+                if (_uiState.value.isScanning) continue
+                
+                val collectedSignals = providers.flatMap { provider ->
+                    try {
+                        provider.provideSignals(appContext)
+                    } catch (e: Exception) {
+                        emptyList()
+                    }
+                }
+                val inference = AppInferenceEngine.computeInference(collectedSignals)
+                val permissions = PermissionCenter.getPermissionStatusMap(appContext)
+                
+                _uiState.update {
+                    it.copy(
+                        signals = collectedSignals,
+                        inferenceResult = inference,
+                        permissionStatus = permissions
+                    )
+                }
+            }
+        }
+    }
+
+    fun stopAutoRefresh() {
+        autoRefreshJob?.cancel()
+        autoRefreshJob = null
+    }
 }

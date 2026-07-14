@@ -66,6 +66,9 @@ import dev.chrisbanes.haze.HazeTint
 import androidx.biometric.BiometricManager
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 @Composable
 fun SpectreLogo(
@@ -677,6 +680,22 @@ fun HomeView(
     var activeUpdateDetails by remember { mutableStateOf<UpdateState.UpdateAvailable?>(null) }
     var activeDetailedSignal by remember { mutableStateOf<FingerprintSignal?>(null) }
     val hazeState = remember { HazeState() }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.startAutoRefresh(context)
+            } else if (event == Lifecycle.Event.ON_PAUSE) {
+                viewModel.stopAutoRefresh()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            viewModel.stopAutoRefresh()
+        }
+    }
 
     LaunchedEffect(updateState) {
         if (updateState is UpdateState.UpdateAvailable) {
