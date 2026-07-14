@@ -8,6 +8,9 @@ import com.matepazy.spectre.model.SignalCategory
 import com.matepazy.spectre.provider.*
 import com.matepazy.spectre.support.AppInferenceEngine
 import com.matepazy.spectre.support.PermissionCenter
+import com.matepazy.spectre.support.UpdateState
+import com.matepazy.spectre.support.VersionUpdater
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +20,15 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class SpectreViewModel : ViewModel() {
+
+    private val _versionCheckEnabled = MutableStateFlow<Boolean?>(null)
+    val versionCheckEnabled: StateFlow<Boolean?> = _versionCheckEnabled.asStateFlow()
+
+    private val _updateChannel = MutableStateFlow("release")
+    val updateChannel: StateFlow<String> = _updateChannel.asStateFlow()
+
+    private val _updateState = MutableStateFlow<UpdateState>(UpdateState.Idle)
+    val updateState: StateFlow<UpdateState> = _updateState.asStateFlow()
 
     private val _uiState = MutableStateFlow(CategoryStore())
     val uiState: StateFlow<CategoryStore> = _uiState.asStateFlow()
@@ -111,6 +123,79 @@ class SpectreViewModel : ViewModel() {
 
     fun setAppUnlocked(unlocked: Boolean) {
         _isAppUnlocked.value = unlocked
+    }
+
+    fun checkVersionPrefs(context: Context) {
+        val prefs = context.getSharedPreferences("spectre_prefs", Context.MODE_PRIVATE)
+        if (prefs.contains("version_check_enabled")) {
+            _versionCheckEnabled.value = prefs.getBoolean("version_check_enabled", false)
+        } else {
+            _versionCheckEnabled.value = null
+        }
+        _updateChannel.value = prefs.getString("version_check_channel", "release") ?: "release"
+    }
+
+    fun setVersionCheckEnabled(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences("spectre_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("version_check_enabled", enabled).apply()
+        _versionCheckEnabled.value = enabled
+        if (enabled) {
+            triggerVersionCheck(context, manual = false)
+        }
+    }
+
+    fun setUpdateChannel(context: Context, channel: String) {
+        val prefs = context.getSharedPreferences("spectre_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putString("version_check_channel", channel).apply()
+        _updateChannel.value = channel
+        if (_versionCheckEnabled.value == true) {
+            triggerVersionCheck(context, manual = false)
+        }
+    }
+
+    fun triggerVersionCheck(context: Context, manual: Boolean) {
+        if (!manual && _versionCheckEnabled.value != true) return
+        
+        _updateState.value = UpdateState.Checking
+        VersionUpdater.checkForUpdates(
+            currentVersion = com.matepazy.spectre.BuildConfig.VERSION_NAME,
+            channel = _updateChannel.value
+        ) { state ->
+            _updateState.value = state
+        }
+    }
+
+    fun startApkDownload(context: Context, downloadUrl: String) {
+        _updateState.value = UpdateState.Downloading(0f)
+        VersionUpdater.downloadApk(
+            context = context,
+            downloadUrl = downloadUrl,
+            onProgress = { progress ->
+                _updateState.value = UpdateState.Downloading(progress)
+            },
+            onCompleted = { file ->
+                _updateState.value = UpdateState.Completed(file)
+            },
+            onError = { errorMsg ->
+                _updateState.value = UpdateState.Error(errorMsg)
+            }
+        )
+    }
+
+    fun installApk(context: Context, file: File) {
+        com.matepazy.spectre.support.ApkInstaller.installApk(context, file)
+    }
+
+    fun canInstallPackages(context: Context): Boolean {
+        return com.matepazy.spectre.support.ApkInstaller.canInstallPackages(context)
+    }
+
+    fun requestInstallPermission(context: Context) {
+        com.matepazy.spectre.support.ApkInstaller.requestInstallPermission(context)
+    }
+
+    fun resetUpdateState() {
+        _updateState.value = UpdateState.Idle
     }
 
     fun selectCategory(category: SignalCategory) {

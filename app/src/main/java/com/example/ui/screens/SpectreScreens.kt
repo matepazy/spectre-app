@@ -52,6 +52,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeJoin
 import com.matepazy.spectre.support.PermissionCenter
+import com.matepazy.spectre.support.UpdateState
 import com.matepazy.spectre.ui.theme.*
 import com.matepazy.spectre.viewmodel.SpectreViewModel
 import android.content.ContextWrapper
@@ -342,7 +343,9 @@ fun SpectreAppContainer(viewModel: SpectreViewModel) {
     LaunchedEffect(Unit) {
         viewModel.checkOnboardingState(context)
         viewModel.checkBiometricState(context)
+        viewModel.checkVersionPrefs(context)
         viewModel.refreshSignals(context, isInitial = true)
+        viewModel.triggerVersionCheck(context, manual = false)
     }
 
     Surface(
@@ -672,10 +675,21 @@ fun HomeView(
     viewModel: SpectreViewModel
 ) {
     val context = LocalContext.current
+    val versionCheckEnabled by viewModel.versionCheckEnabled.collectAsState()
+    val updateState by viewModel.updateState.collectAsState()
     var showExportDialog by remember { mutableStateOf(false) }
     var showAboutView by remember { mutableStateOf(false) }
+    var showUpdateDetailsDialog by remember { mutableStateOf(false) }
+    var activeUpdateDetails by remember { mutableStateOf<UpdateState.UpdateAvailable?>(null) }
     var activeDetailedSignal by remember { mutableStateOf<FingerprintSignal?>(null) }
     val hazeState = remember { HazeState() }
+
+    LaunchedEffect(updateState) {
+        if (updateState is UpdateState.UpdateAvailable) {
+            activeUpdateDetails = updateState as UpdateState.UpdateAvailable
+            showUpdateDetailsDialog = true
+        }
+    }
 
     // Multi-Permission Request Launcher
     val permissionsLauncher = rememberLauncherForActivityResult(
@@ -887,6 +901,16 @@ fun HomeView(
                         ),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
+                        val currentUpdate = updateState
+                        if (currentUpdate is UpdateState.UpdateAvailable) {
+                            item {
+                                UpdateBannerCard(
+                                    version = currentUpdate.version,
+                                    onClick = { showUpdateDetailsDialog = true }
+                                )
+                            }
+                        }
+
                         // Filtered signal rows
                         val filteredSignals = uiState.signals.filter { it.category == uiState.selectedCategory }
                         if (filteredSignals.isEmpty()) {
@@ -980,6 +1004,28 @@ fun HomeView(
                 viewModel = viewModel
             )
         }
+    }
+
+    if (versionCheckEnabled == null) {
+        VersionOptInDialog(
+            onDecision = { enabled ->
+                viewModel.setVersionCheckEnabled(context, enabled)
+            }
+        )
+    }
+
+    if (showUpdateDetailsDialog && activeUpdateDetails != null) {
+        val update = activeUpdateDetails!!
+        UpdateDetailsDialog(
+            version = update.version,
+            notes = update.notes,
+            downloadUrl = update.downloadUrl,
+            onDismiss = {
+                showUpdateDetailsDialog = false
+                activeUpdateDetails = null
+            },
+            viewModel = viewModel
+        )
     }
 
     // Detailed Registry Dialog Overlay
@@ -2081,6 +2127,9 @@ fun AboutView(
 ) {
     val context = LocalContext.current
     val isBiometricEnabled by viewModel.isBiometricLockEnabled.collectAsState()
+    val versionCheckEnabled by viewModel.versionCheckEnabled.collectAsState()
+    val updateChannel by viewModel.updateChannel.collectAsState()
+    val updateState by viewModel.updateState.collectAsState()
 
     Card(
         modifier = Modifier
@@ -2194,6 +2243,183 @@ fun AboutView(
                         checkedTrackColor = SpectrePurple
                     )
                 )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "UPDATES & SYSTEM",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace,
+                color = CyberTextSecondary,
+                modifier = Modifier.align(Alignment.Start)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(CyberDarkBg)
+                    .padding(12.dp)
+            ) {
+                // Row 1: Auto Version Checking Toggle
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CloudDownload,
+                            contentDescription = null,
+                            tint = CyberBlue,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Auto Check Updates",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = CyberTextPrimary
+                            )
+                            Text(
+                                text = "Fetch updates from GitHub API",
+                                fontSize = 11.sp,
+                                color = CyberTextSecondary
+                            )
+                        }
+                    }
+                    Switch(
+                        checked = versionCheckEnabled == true,
+                        onCheckedChange = { checked ->
+                            viewModel.setVersionCheckEnabled(context, checked)
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = CyberBlue
+                        )
+                    )
+                }
+
+                HorizontalDivider(color = CyberBorder.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 12.dp))
+
+                // Row 2: Update Channel Select (Release vs Pre-release)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SettingsSuggest,
+                            contentDescription = null,
+                            tint = CyberOrange,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Update Channel",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = CyberTextPrimary
+                            )
+                            Text(
+                                text = "Choose release track",
+                                fontSize = 11.sp,
+                                color = CyberTextSecondary
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(100))
+                            .background(CyberBorder.copy(alpha = 0.3f))
+                            .padding(2.dp)
+                    ) {
+                        val channels = listOf("release", "pre-release")
+                        channels.forEach { ch ->
+                            val isSel = updateChannel == ch
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(100))
+                                    .background(if (isSel) SpectrePurple else Color.Transparent)
+                                    .clickable { viewModel.setUpdateChannel(context, ch) }
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = if (ch == "release") "Stable" else "Beta",
+                                    color = if (isSel) Color.White else CyberTextSecondary,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+
+                HorizontalDivider(color = CyberBorder.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 12.dp))
+
+                // Row 3: Manual Check for Updates
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Sync,
+                            contentDescription = null,
+                            tint = CyberGreen,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Manual Check",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = CyberTextPrimary
+                            )
+                            val statusText = when (updateState) {
+                                is UpdateState.Checking -> "Checking..."
+                                is UpdateState.UpdateAvailable -> "Update available!"
+                                is UpdateState.Downloading -> "Downloading..."
+                                is UpdateState.Completed -> "Ready to install"
+                                is UpdateState.Error -> "Check failed"
+                                else -> "Up to date"
+                            }
+                            Text(
+                                text = "Status: $statusText",
+                                fontSize = 11.sp,
+                                color = CyberTextSecondary
+                            )
+                        }
+                    }
+
+                    Button(
+                        onClick = { viewModel.triggerVersionCheck(context, manual = true) },
+                        colors = ButtonDefaults.buttonColors(containerColor = CyberGreen),
+                        modifier = Modifier.height(32.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp)
+                    ) {
+                        Text("Check", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -2538,5 +2764,374 @@ private fun getDetailItemIcon(name: String): ImageVector {
         "check" -> Icons.Default.CheckCircle
         "close", "error" -> Icons.Default.Cancel
         else -> Icons.Default.Info
+    }
+}
+
+@Composable
+fun VersionOptInDialog(
+    onDecision: (Boolean) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = { /* Force a choice */ },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.CloudDownload,
+                    contentDescription = null,
+                    tint = SpectrePurple,
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Automatic Updates",
+                    fontWeight = FontWeight.Bold,
+                    color = CyberTextPrimary,
+                    fontSize = 18.sp
+                )
+            }
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Would you like Spectre to automatically check for updates via the GitHub API?",
+                    color = CyberTextPrimary,
+                    fontSize = 14.sp
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "We care about your privacy: Spectre does not collect or transmit any personal data. Only the standard networking info that GitHub collects during API queries (like your IP address) is generated when checking for updates.",
+                    color = CyberTextSecondary,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onDecision(true) },
+                colors = ButtonDefaults.buttonColors(containerColor = SpectrePurple)
+            ) {
+                Text("Enable", color = Color.White, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            OutlinedButton(
+                onClick = { onDecision(false) },
+                border = BorderStroke(1.dp, CyberBorder)
+            ) {
+                Text("Disable", color = CyberTextPrimary)
+            }
+        },
+        containerColor = CyberCardBg,
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.border(1.dp, CyberBorder, RoundedCornerShape(16.dp))
+    )
+}
+
+@Composable
+fun UpdateBannerCard(version: String, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(bottom = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = CyberOrange.copy(alpha = 0.08f)),
+        border = BorderStroke(1.2.dp, CyberOrange.copy(alpha = 0.5f)),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(14.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(CyberOrange.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.NewReleases,
+                    contentDescription = "New Version Available",
+                    tint = CyberOrange,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "New Update Available: $version",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = CyberTextPrimary
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Tap to review release notes and install seamlessly.",
+                    fontSize = 11.sp,
+                    color = CyberTextSecondary
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = CyberTextSecondary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun UpdateDetailsDialog(
+    version: String,
+    notes: String,
+    downloadUrl: String,
+    onDismiss: () -> Unit,
+    viewModel: SpectreViewModel
+) {
+    val context = LocalContext.current
+    val updateState by viewModel.updateState.collectAsState()
+    
+    var showPermissionExplanation by remember { mutableStateOf(false) }
+
+    LaunchedEffect(updateState) {
+        if (updateState is UpdateState.Completed) {
+            val file = (updateState as UpdateState.Completed).apkFile
+            if (viewModel.canInstallPackages(context)) {
+                viewModel.installApk(context, file)
+            } else {
+                showPermissionExplanation = true
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = { 
+            if (updateState !is UpdateState.Downloading) {
+                onDismiss()
+            }
+        },
+        title = {
+            Text(
+                text = "Update to $version",
+                fontWeight = FontWeight.Bold,
+                color = CyberTextPrimary,
+                fontSize = 18.sp
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+            ) {
+                when (updateState) {
+                    is UpdateState.Downloading -> {
+                        val progress = (updateState as UpdateState.Downloading).progress
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            CircularProgressIndicator(
+                                progress = { progress },
+                                color = CyberOrange,
+                                strokeWidth = 4.dp,
+                                modifier = Modifier.size(56.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "Downloading update... ${(progress * 100).toInt()}%",
+                                color = CyberTextPrimary,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LinearProgressIndicator(
+                                progress = { progress },
+                                color = CyberOrange,
+                                trackColor = CyberBorder,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                            )
+                        }
+                    }
+                    is UpdateState.Completed -> {
+                        val apkFile = (updateState as UpdateState.Completed).apkFile
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = CyberGreen,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "Download Complete",
+                                color = CyberTextPrimary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Ready to install the new version.",
+                                color = CyberTextSecondary,
+                                fontSize = 12.sp,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                    is UpdateState.Error -> {
+                        val errorMsg = (updateState as UpdateState.Error).message
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Error,
+                                contentDescription = null,
+                                tint = CyberRed,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "Update Failed",
+                                color = CyberTextPrimary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = errorMsg,
+                                color = CyberRed,
+                                fontSize = 12.sp,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                    else -> {
+                        Column {
+                            Text(
+                                text = "Release Notes:",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 12.sp,
+                                color = CyberBlue,
+                                fontFamily = FontFamily.Monospace
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 180.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(CyberDarkBg)
+                                    .border(1.dp, CyberBorder, RoundedCornerShape(8.dp))
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(10.dp)
+                            ) {
+                                Text(
+                                    text = notes,
+                                    fontSize = 12.sp,
+                                    color = CyberTextPrimary
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            when (updateState) {
+                is UpdateState.Downloading -> {}
+                is UpdateState.Completed -> {
+                    val file = (updateState as UpdateState.Completed).apkFile
+                    Button(
+                        onClick = {
+                            if (viewModel.canInstallPackages(context)) {
+                                viewModel.installApk(context, file)
+                            } else {
+                                showPermissionExplanation = true
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = CyberGreen)
+                    ) {
+                        Text("Install", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+                is UpdateState.Error -> {
+                    Button(
+                        onClick = { viewModel.resetUpdateState() },
+                        colors = ButtonDefaults.buttonColors(containerColor = SpectrePurple)
+                    ) {
+                        Text("Retry", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+                else -> {
+                    Button(
+                        onClick = { viewModel.startApkDownload(context, downloadUrl) },
+                        colors = ButtonDefaults.buttonColors(containerColor = CyberOrange)
+                    ) {
+                        Text("Download & Install", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        },
+        dismissButton = {
+            if (updateState !is UpdateState.Downloading) {
+                OutlinedButton(
+                    onClick = {
+                        viewModel.resetUpdateState()
+                        onDismiss()
+                    },
+                    border = BorderStroke(1.dp, CyberBorder)
+                ) {
+                    Text("Close", color = CyberTextPrimary)
+                }
+            }
+        },
+        containerColor = CyberCardBg,
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.border(1.dp, CyberBorder, RoundedCornerShape(16.dp))
+    )
+
+    if (showPermissionExplanation) {
+        AlertDialog(
+            onDismissRequest = { showPermissionExplanation = false },
+            title = { Text("Installation Permission Required", fontWeight = FontWeight.Bold, color = CyberTextPrimary) },
+            text = {
+                Text(
+                    text = "To update the app, Spectre needs permission to install packages. We will redirect you to the system settings to enable 'Install unknown apps' for Spectre.",
+                    color = CyberTextSecondary
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showPermissionExplanation = false
+                        viewModel.requestInstallPermission(context)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SpectrePurple)
+                ) {
+                    Text("Go to Settings", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showPermissionExplanation = false },
+                    border = BorderStroke(1.dp, CyberBorder)
+                ) {
+                    Text("Cancel", color = CyberTextPrimary)
+                }
+            },
+            containerColor = CyberCardBg,
+            shape = RoundedCornerShape(16.dp)
+        )
     }
 }
