@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 
 class SpectreViewModel : ViewModel() {
 
@@ -213,13 +215,15 @@ class SpectreViewModel : ViewModel() {
                 delay(300)
             }
             
-            val collectedSignals = providers.flatMap { provider ->
-                try {
-                    provider.provideSignals(context)
-                } catch (e: Exception) {
-                    emptyList()
+            val collectedSignals = providers.map { provider ->
+                async {
+                    try {
+                        provider.provideSignals(context)
+                    } catch (e: Exception) {
+                        emptyList()
+                    }
                 }
-            }
+            }.awaitAll().flatten()
             
             val inference = AppInferenceEngine.computeInference(collectedSignals)
             val permissions = PermissionCenter.getPermissionStatusMap(context)
@@ -237,13 +241,15 @@ class SpectreViewModel : ViewModel() {
 
     fun updatePermissionState(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
-            val collectedSignals = providers.flatMap { provider ->
-                try {
-                    provider.provideSignals(context)
-                } catch (e: Exception) {
-                    emptyList()
+            val collectedSignals = providers.map { provider ->
+                async {
+                    try {
+                        provider.provideSignals(context)
+                    } catch (e: Exception) {
+                        emptyList()
+                    }
                 }
-            }
+            }.awaitAll().flatten()
             val inference = AppInferenceEngine.computeInference(collectedSignals)
             val permissions = PermissionCenter.getPermissionStatusMap(context)
             
@@ -267,13 +273,15 @@ class SpectreViewModel : ViewModel() {
                 delay(2000)
                 if (_uiState.value.isScanning) continue
                 
-                val collectedSignals = providers.flatMap { provider ->
-                    try {
-                        provider.provideSignals(appContext)
-                    } catch (e: Exception) {
-                        emptyList()
+                val collectedSignals = providers.map { provider ->
+                    async {
+                        try {
+                            provider.provideSignals(appContext)
+                        } catch (e: Exception) {
+                            emptyList()
+                        }
                     }
-                }
+                }.awaitAll().flatten()
                 val inference = AppInferenceEngine.computeInference(collectedSignals)
                 val permissions = PermissionCenter.getPermissionStatusMap(appContext)
                 

@@ -43,6 +43,26 @@ data class FingerprintSignal(
     val narrative: String,
     val threatScore: Int, // 0 to 10
     val permissionName: String? = null,
-    val detailedData: List<DetailedGroup>? = null
-)
+    val detailedData: List<DetailedGroup>? = null,
+    val isSensitive: Boolean = false,
+    val sensitiveRawValue: String? = null
+) {
+    fun getSignatureValue(): String {
+        return if (isSensitive && sensitiveRawValue != null) {
+            sha256(sensitiveRawValue)
+        } else {
+            rawValue
+        }
+    }
+}
+
+private fun sha256(input: String): String {
+    return try {
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        val hashBytes = digest.digest(input.toByteArray(Charsets.UTF_8))
+        hashBytes.joinToString("") { "%02x".format(it) }.uppercase()
+    } catch (e: Exception) {
+        input
+    }
+}
 

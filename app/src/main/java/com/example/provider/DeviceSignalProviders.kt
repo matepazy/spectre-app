@@ -52,12 +52,12 @@ fun detailedGroup(categoryName: String?, items: List<DetailedItem>) =
 
 abstract class SignalProvider {
     abstract val id: String
-    abstract fun provideSignals(context: Context): List<FingerprintSignal>
+    abstract suspend fun provideSignals(context: Context): List<FingerprintSignal>
 }
 
 class AccessibilityProvider : SignalProvider() {
     override val id = "accessibility"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         return try {
             val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
             val isEnabled = am.isEnabled
@@ -160,7 +160,7 @@ class AccessibilityProvider : SignalProvider() {
 
 class AppInfoProvider : SignalProvider() {
     override val id = "app_info"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         return try {
             val appInfo = context.applicationInfo
             val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
@@ -263,7 +263,7 @@ class AppInfoProvider : SignalProvider() {
 }
 class InstalledAppsProvider : SignalProvider() {
     override val id = "installed_apps"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val signals = mutableListOf<FingerprintSignal>()
         val socialSchemes = mapOf(
             "WhatsApp" to "whatsapp://send",
@@ -320,6 +320,89 @@ class InstalledAppsProvider : SignalProvider() {
             )
         )
         
+        // QUERY_ALL_PACKAGES app list query
+        val hasQueryAllPackages = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            context.checkSelfPermission("android.permission.QUERY_ALL_PACKAGES") == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+
+        val appListItems = mutableListOf<DetailedItem>()
+        var appRawValue = "Permission Blocked"
+        var appSensitiveRawValue = ""
+        var appIsSensitive = false
+
+        if (hasQueryAllPackages) {
+            try {
+                val packages = pm.getInstalledPackages(PackageManager.GET_META_DATA)
+                val userApps = packages.filter { pInfo ->
+                    val appInfo = pInfo.applicationInfo
+                    appInfo != null && (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) == 0
+                }
+                
+                var playStoreCount = 0
+                var sideloadCount = 0
+                
+                userApps.forEach { pInfo ->
+                    val appInfo = pInfo.applicationInfo ?: return@forEach
+                    val appLabel = pm.getApplicationLabel(appInfo).toString()
+                    val pkgName = pInfo.packageName
+                    
+                    val installer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        try {
+                            pm.getInstallSourceInfo(pkgName).installingPackageName
+                        } catch (e: Exception) {
+                            pm.getInstallerPackageName(pkgName)
+                        }
+                    } else {
+                        pm.getInstallerPackageName(pkgName)
+                    } ?: "Sideload / Developer"
+                    
+                    if (installer.contains("vending") || installer.contains("play")) {
+                        playStoreCount++
+                    } else {
+                        sideloadCount++
+                    }
+                    
+                    appListItems.add(detailedItem(
+                        label = appLabel,
+                        value = "Package: $pkgName\nSource: $installer",
+                        description = "User Installed App Info",
+                        iconName = "settings"
+                    ))
+                }
+                
+                if (appListItems.isEmpty()) {
+                    appListItems.add(detailedItem("Installed Packages", "No user applications found", "No non-system apps registered", "close"))
+                    appRawValue = "No user apps found"
+                } else {
+                    appRawValue = "Total: ${userApps.size} apps | Google Play: $playStoreCount | Sideloaded: $sideloadCount"
+                    appSensitiveRawValue = userApps.joinToString(",") { it.packageName }
+                    appIsSensitive = true
+                }
+            } catch (e: Exception) {
+                appRawValue = "Query Error: ${e.localizedMessage}"
+            }
+        } else {
+            appListItems.add(detailedItem("Installed Packages", "Query restricted by package visibility sandbox", "Query All Packages permission not granted", "close"))
+        }
+
+        signals.add(
+            FingerprintSignal(
+                id = "installed_packages_list",
+                name = "Installed Applications Footprint",
+                description = "Scans all user-installed applications and queries their installation source (e.g. Play Store vs Sideload).",
+                category = SignalCategory.NEEDS_PERMISSION,
+                rawValue = appRawValue,
+                narrative = "The complete list of installed applications forms a highly distinctive fingerprint (an app-graph). Combined with install sources, it reveals whether you use custom developer apps, side-loaded apps, or standard marketplace apps.",
+                threatScore = 8,
+                permissionName = "android.permission.QUERY_ALL_PACKAGES",
+                detailedData = listOf(detailedGroup("Installed Applications Inventory", appListItems)),
+                isSensitive = appIsSensitive,
+                sensitiveRawValue = if (appIsSensitive) appSensitiveRawValue else null
+            )
+        )
+        
         return signals
     }
 }
@@ -327,7 +410,7 @@ class InstalledAppsProvider : SignalProvider() {
 class AudioRouteProvider : SignalProvider() {
     override val id = "audio_route"
     @SuppressLint("NewApi")
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         return try {
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             val outputs = mutableListOf<String>()
@@ -431,7 +514,7 @@ class AudioRouteProvider : SignalProvider() {
 
 class BatteryProvider : SignalProvider() {
     override val id = "battery"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         return try {
             val batteryStatus: Intent? = context.registerReceiver(
                 null,
@@ -560,7 +643,7 @@ class BatteryProvider : SignalProvider() {
 class BluetoothProvider : SignalProvider() {
     override val id = "bluetooth"
     @SuppressLint("MissingPermission")
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val signals = mutableListOf<FingerprintSignal>()
         try {
             val hasBluetoothPermission = context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
@@ -583,25 +666,39 @@ class BluetoothProvider : SignalProvider() {
             )
             
             val bondedItems = mutableListOf<DetailedItem>()
+            var sensitiveBluetoothRaw = ""
+            var bluetoothIsSensitive = false
             if (adapter != null) {
                 if (hasBluetoothPermission) {
                     val bondedDevices = adapter.bondedDevices
+                    val deviceList = mutableListOf<String>()
                     bondedDevices.forEach { device ->
+                        val devName = device.name ?: "Unnamed Peripheral"
+                        val devAddr = device.address ?: "02:00:00:00:00:00"
+                        deviceList.add("$devName($devAddr)")
+                        
                         val devType = when (device.type) {
                             android.bluetooth.BluetoothDevice.DEVICE_TYPE_CLASSIC -> "Classic (BR/EDR)"
                             android.bluetooth.BluetoothDevice.DEVICE_TYPE_LE -> "Low Energy (BLE)"
                             android.bluetooth.BluetoothDevice.DEVICE_TYPE_DUAL -> "Dual Mode"
                             else -> "Unknown"
                         }
+                        
+                        val nameMasked = maskBluetoothName(devName)
+                        val addressMasked = maskBluetoothAddress(devAddr)
+                        
                         bondedItems.add(detailedItem(
-                            label = device.name ?: "Unnamed Peripheral",
-                            value = "MAC: ${device.address}\nType: $devType\nBond State: Bonded",
+                            label = nameMasked,
+                            value = "MAC: $addressMasked\nType: $devType\nBond State: Bonded",
                             description = "Device UUID count: ${device.uuids?.size ?: 0}",
                             iconName = "bluetooth"
                         ))
                     }
                     if (bondedItems.isEmpty()) {
                         bondedItems.add(detailedItem("Bonded Registry", "No paired devices found", "No Bluetooth pairings registered in memory", "close"))
+                    } else {
+                        sensitiveBluetoothRaw = deviceList.joinToString(",")
+                        bluetoothIsSensitive = true
                     }
                 } else {
                     bondedItems.add(detailedItem("Bonded Registry", "Permission Blocked", "Requires BLUETOOTH_CONNECT runtime permission", "close"))
@@ -647,7 +744,9 @@ class BluetoothProvider : SignalProvider() {
                     narrative = "Paired wearables, headsets, and vehicle infotainment names contain custom tags. This yields extreme tracking capabilities and is an absolute fingerprint beacon.",
                     threatScore = 9,
                     permissionName = android.Manifest.permission.BLUETOOTH_CONNECT,
-                    detailedData = bluetoothDetails
+                    detailedData = bluetoothDetails,
+                    isSensitive = bluetoothIsSensitive,
+                    sensitiveRawValue = if (bluetoothIsSensitive) sensitiveBluetoothRaw else null
                 )
             )
         } catch (e: Exception) {
@@ -661,7 +760,7 @@ class BluetoothProvider : SignalProvider() {
 
 class CalendarProvider : SignalProvider() {
     override val id = "calendar"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val hasPermission = context.checkSelfPermission(android.Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED
         
         val detailedItems = mutableListOf<DetailedItem>()
@@ -737,7 +836,7 @@ class CalendarProvider : SignalProvider() {
 
 class CameraProvider : SignalProvider() {
     override val id = "camera"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val signals = mutableListOf<FingerprintSignal>()
         try {
             val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
@@ -825,7 +924,7 @@ class CameraProvider : SignalProvider() {
 
 class ContactsProvider : SignalProvider() {
       override val id = "contacts"
-      override fun provideSignals(context: Context): List<FingerprintSignal> {
+      override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
           val hasPermission = context.checkSelfPermission(android.Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
           
           val detailedItems = mutableListOf<DetailedItem>()
@@ -892,7 +991,7 @@ class ContactsProvider : SignalProvider() {
 
 class DeviceIdentityProvider : SignalProvider() {
       override val id = "device_identity"
-      override fun provideSignals(context: Context): List<FingerprintSignal> {
+      override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
           val uptimeSeconds = SystemClock.elapsedRealtime() / 1000
           val days = uptimeSeconds / 86400
           val hours = (uptimeSeconds % 86400) / 3600
@@ -984,7 +1083,7 @@ class DeviceIdentityProvider : SignalProvider() {
 
 class DeviceMotionProvider : SignalProvider() {
       override val id = "device_motion"
-      override fun provideSignals(context: Context): List<FingerprintSignal> {
+      override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
           val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
           
           val accel = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
@@ -1050,7 +1149,7 @@ class DeviceMotionProvider : SignalProvider() {
 
 class DisplayProvider : SignalProvider() {
       override val id = "display"
-      override fun provideSignals(context: Context): List<FingerprintSignal> {
+      override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
           val metrics = context.resources.displayMetrics
           val width = metrics.widthPixels
           val height = metrics.heightPixels
@@ -1063,11 +1162,24 @@ class DisplayProvider : SignalProvider() {
           
           val fontScale = context.resources.configuration.fontScale
           
+          val refreshRate = try {
+              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                  context.display?.mode?.refreshRate
+              } else {
+                  val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as? android.view.WindowManager
+                  @Suppress("DEPRECATION")
+                  windowManager?.defaultDisplay?.refreshRate
+              }
+          } catch (e: Exception) {
+              null
+          } ?: 60f
+          
           val displayItems = listOf(
               detailedItem("Viewport Width", "$width px", "Physical pixel width of screen layout", "hardware"),
               detailedItem("Viewport Height", "$height px", "Physical pixel height of screen layout", "hardware"),
               detailedItem("Screen Density", "${density}x", "Logical scaling density factor", "info"),
               detailedItem("Density DPI", "$dpi DPI", "Dots-per-inch scaling constant", "info"),
+              detailedItem("Screen Refresh Rate", "${String.format("%.1f", refreshRate)} Hz", "Hardware screen refresh frequency in Hertz", "info"),
               detailedItem("Horizontal DPI (xDpi)", "$xdpi", "Physical pixels per inch in X dimension", "info"),
               detailedItem("Vertical DPI (yDpi)", "$ydpi", "Physical pixels per inch in Y dimension", "info"),
               detailedItem("Scaled Density", "${metrics.scaledDensity}x", "Typography scaling density factor", "info"),
@@ -1081,9 +1193,9 @@ class DisplayProvider : SignalProvider() {
               FingerprintSignal(
                   id = "display_resolution_dpi",
                   name = "Display Resolution & Density",
-                  description = "Reads pixel height, width, and screen scaling density (DPI).",
+                  description = "Reads pixel height, width, screen scaling density (DPI), and refresh rate.",
                   category = SignalCategory.PASSIVE,
-                  rawValue = "${width}x${height} px | $dpi DPI",
+                  rawValue = "${width}x${height} px | $dpi DPI | ${String.format("%.1f", refreshRate)} Hz",
                   narrative = "Screen resolution profiles are shared with ad servers to scale visual content. In analytics scripts, display height, width, and color depth serve as core components of browser identity.",
                   threatScore = 4,
                   detailedData = displayDetails
@@ -1106,7 +1218,7 @@ class DisplayProvider : SignalProvider() {
 
 class FontsProvider : SignalProvider() {
     override val id = "fonts"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val fontsDir = File("/system/fonts")
         val fontFiles = mutableListOf<DetailedItem>()
         var count = 0
@@ -1148,7 +1260,7 @@ class FontsProvider : SignalProvider() {
 
 class LocalNetworkProvider : SignalProvider() {
     override val id = "local_network"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val signals = mutableListOf<FingerprintSignal>()
         try {
             val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -1249,7 +1361,7 @@ class LocalNetworkProvider : SignalProvider() {
 
 class LocaleProvider : SignalProvider() {
     override val id = "locale"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val locale = Locale.getDefault()
         val timezone = TimeZone.getDefault()
         
@@ -1302,7 +1414,7 @@ class LocaleProvider : SignalProvider() {
 
 class PasteboardProvider : SignalProvider() {
     override val id = "pasteboard"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         return try {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
             val hasClip = clipboard.hasPrimaryClip()
@@ -1367,7 +1479,7 @@ class PasteboardProvider : SignalProvider() {
 
 class StorageProvider : SignalProvider() {
     override val id = "storage"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         return try {
             val dataDir = Environment.getDataDirectory()
             val totalBytes = dataDir.totalSpace
@@ -1425,7 +1537,7 @@ class StorageProvider : SignalProvider() {
 
 class WebViewFingerprintProvider : SignalProvider() {
     override val id = "webview_fingerprint"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val userAgent = try {
             WebSettings.getDefaultUserAgent(context)
         } catch (e: Exception) {
@@ -1476,7 +1588,7 @@ class WebViewFingerprintProvider : SignalProvider() {
 
 class LocationProvider : SignalProvider() {
     override val id = "location"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val hasCoarse = context.checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val hasFine = context.checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val hasPermission = hasCoarse || hasFine
@@ -1550,7 +1662,7 @@ class LocationProvider : SignalProvider() {
 
 class MicrophoneProvider : SignalProvider() {
     override val id = "microphone"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val hasPermission = context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
         val rawSummary = if (hasPermission) "Access Granted" else "Permission Blocked"
         
@@ -1602,10 +1714,11 @@ class MicrophoneProvider : SignalProvider() {
 
 class DrmProvider : SignalProvider() {
     override val id = "drm_fingerprint"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val WIDEVINE_UUID = UUID(-0x12107c1d3537856aL, -0x7c2137b381042968L)
         val drmProperties = mutableListOf<DetailedItem>()
         var drmId = "Unavailable"
+        var securityLevel = "Unknown"
         try {
             val mediaDrm = MediaDrm(WIDEVINE_UUID)
             val deviceId = mediaDrm.getPropertyByteArray(MediaDrm.PROPERTY_DEVICE_UNIQUE_ID)
@@ -1617,7 +1730,7 @@ class DrmProvider : SignalProvider() {
             drmProperties.add(detailedItem("DRM Description", mediaDrm.getPropertyString(MediaDrm.PROPERTY_DESCRIPTION), "DRM profile description", "info"))
             drmProperties.add(detailedItem("DRM Algorithms", mediaDrm.getPropertyString(MediaDrm.PROPERTY_ALGORITHMS), "Supported cryptographic algorithms", "code"))
             
-            val securityLevel = try {
+            securityLevel = try {
                 mediaDrm.getPropertyString("securityLevel")
             } catch (e: Exception) {
                 "L3 (Software/Fallback)"
@@ -1632,6 +1745,16 @@ class DrmProvider : SignalProvider() {
         val summaryId = if (drmId.length > 25) drmId.take(22) + "..." else drmId
 
         return listOf(
+            FingerprintSignal(
+                id = "drm_widevine_security_level",
+                name = "Widevine DRM Security Level",
+                description = "Queries the Widevine DRM security level (L1, L2, L3) to evaluate hardware protection capability.",
+                category = SignalCategory.PASSIVE,
+                rawValue = securityLevel,
+                narrative = "The DRM Security Level indicates whether the device has a hardware-backed secure execution environment (L1) or software-based decryption (L3). Trackers use this status to categorize device capability classes.",
+                threatScore = 3,
+                detailedData = drmDetails
+            ),
             FingerprintSignal(
                 id = "drm_widevine_system_id",
                 name = "Widevine DRM Hardware Signature ID",
@@ -1648,7 +1771,7 @@ class DrmProvider : SignalProvider() {
 
 class PhoneStateProvider : SignalProvider() {
     override val id = "phone_state"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val hasPermission = context.checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
         
         val detailedItems = mutableListOf<DetailedItem>()
@@ -1720,7 +1843,7 @@ class PhoneStateProvider : SignalProvider() {
 
 class CallLogProvider : SignalProvider() {
     override val id = "call_log"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val hasPermission = context.checkSelfPermission(android.Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED
         val detailedItems = mutableListOf<DetailedItem>()
         var count = 0
@@ -1807,7 +1930,7 @@ class CallLogProvider : SignalProvider() {
 
 class SmsProvider : SignalProvider() {
     override val id = "sms"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val hasPermission = context.checkSelfPermission(android.Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
         val detailedItems = mutableListOf<DetailedItem>()
         var count = 0
@@ -1894,7 +2017,7 @@ class SmsProvider : SignalProvider() {
 
 class AccountsProvider : SignalProvider() {
     override val id = "accounts"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val hasPermission = context.checkSelfPermission(android.Manifest.permission.GET_ACCOUNTS) == PackageManager.PERMISSION_GRANTED
         val detailedItems = mutableListOf<DetailedItem>()
         var count = 0
@@ -1944,7 +2067,7 @@ class AccountsProvider : SignalProvider() {
 
 class BodySensorsProvider : SignalProvider() {
     override val id = "body_sensors"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val hasPermission = context.checkSelfPermission(android.Manifest.permission.BODY_SENSORS) == PackageManager.PERMISSION_GRANTED
         val rawValue = if (hasPermission) "Access Granted" else "Permission Blocked"
         
@@ -1971,7 +2094,7 @@ class BodySensorsProvider : SignalProvider() {
 
 class NotificationPermissionProvider : SignalProvider() {
     override val id = "notifications"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val hasPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
         } else {
@@ -2002,7 +2125,7 @@ class NotificationPermissionProvider : SignalProvider() {
 
 class HardwareSensorsProvider : SignalProvider() {
     override val id = "hardware_sensors"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         return try {
             val sm = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
             val sensors = sm.getSensorList(Sensor.TYPE_ALL)
@@ -2012,8 +2135,8 @@ class HardwareSensorsProvider : SignalProvider() {
             sensors.forEach { sensor ->
                 details.add(detailedItem(
                     label = sensor.name,
-                    value = "Vendor: ${sensor.vendor}\nVersion: ${sensor.version}\nMax Range: ${sensor.maximumRange}\nResolution: ${sensor.resolution}\nPower: ${sensor.power} mA",
-                    description = "Sensor Type Code: ${sensor.type} | Type String: ${sensor.stringType}",
+                    value = "Type: ${sensor.stringType} (Code: ${sensor.type})",
+                    description = "Hardware Sensor Node",
                     iconName = "sensor"
                 ))
             }
@@ -2041,7 +2164,7 @@ class HardwareSensorsProvider : SignalProvider() {
 
 class SystemSettingsProvider : SignalProvider() {
     override val id = "system_settings"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         return try {
             val brightness = Settings.System.getInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS, -1)
             val timeout = Settings.System.getInt(context.contentResolver, Settings.System.SCREEN_OFF_TIMEOUT, -1)
@@ -2051,12 +2174,14 @@ class SystemSettingsProvider : SignalProvider() {
                 -1
             }
             val developerOptions = Settings.Global.getInt(context.contentResolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, -1)
+            val airplaneMode = Settings.Global.getInt(context.contentResolver, Settings.Global.AIRPLANE_MODE_ON, 0) == 1
             
             val settingsItems = listOf(
                 detailedItem("Screen Brightness Level", "$brightness (scale: 0-255)", "Active screen backlight intensity level", "settings"),
                 detailedItem("Screen Off Timeout Duration", "$timeout ms (${timeout / 1000} seconds)", "Inactivity duration before system sleeps screen display", "time"),
                 detailedItem("Haptic Touch Feedback", if (haptic == 1) "Enabled" else if (haptic == 0) "Disabled" else "Unavailable", "Vibration on key taps preference setting", "check"),
-                detailedItem("Developer Options Active", if (developerOptions == 1) "Enabled" else if (developerOptions == 0) "Disabled" else "Unavailable", "Whether platform developer mode menu is enabled", "check")
+                detailedItem("Developer Options Active", if (developerOptions == 1) "Enabled" else if (developerOptions == 0) "Disabled" else "Unavailable", "Whether platform developer mode menu is enabled", "check"),
+                detailedItem("Airplane Mode Status", airplaneMode.toString(), "Whether wireless network transmitters are disabled", "check")
             )
 
             val secureSettings = try {
@@ -2084,9 +2209,9 @@ class SystemSettingsProvider : SignalProvider() {
                 FingerprintSignal(
                     id = "system_settings_leak",
                     name = "Passive System Settings Leak",
-                    description = "Collects global settings like screen timeout, screen brightness levels, and haptic feedback toggles.",
+                    description = "Collects global settings like screen timeout, screen brightness levels, developer options, and airplane mode.",
                     category = SignalCategory.PASSIVE,
-                    rawValue = "Brightness: $brightness | Timeout: ${timeout / 1000}s",
+                    rawValue = "Brightness: $brightness | Timeout: ${timeout / 1000}s | Airplane Mode: ${if (airplaneMode) "On" else "Off"}",
                     narrative = "System settings are highly customizable. Combining multiple system variables (screen off timeout, developer mode toggles, and brightness metrics) narrows down the uniqueness index of your phone with zero permission friction.",
                     threatScore = 5,
                     detailedData = systemDetails
@@ -2100,7 +2225,7 @@ class SystemSettingsProvider : SignalProvider() {
 
 class DeviceUptimeProvider : SignalProvider() {
     override val id = "device_uptime"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val uptimeMs = SystemClock.elapsedRealtime()
         val uptimeHrs = uptimeMs / (1000.0 * 60.0 * 60.0)
         val df = DecimalFormat("#.##")
@@ -2138,7 +2263,7 @@ class DeviceUptimeProvider : SignalProvider() {
 
 class OpenGLProvider : SignalProvider() {
     override val id = "opengl_fingerprint"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         return try {
             val am = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
             val info = am.deviceConfigurationInfo
@@ -2171,7 +2296,7 @@ class OpenGLProvider : SignalProvider() {
 
 class NetworkInterfacesProvider : SignalProvider() {
     override val id = "network_interfaces"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         return try {
             val interfaces = NetworkInterface.getNetworkInterfaces()?.toList() ?: emptyList()
             val count = interfaces.size
@@ -2220,7 +2345,7 @@ class NetworkInterfacesProvider : SignalProvider() {
 
 class TelephonyOperatorProvider : SignalProvider() {
     override val id = "telephony_operator"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         return try {
             val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
             val name = tm.networkOperatorName ?: "Unknown"
@@ -2269,7 +2394,7 @@ class TelephonyOperatorProvider : SignalProvider() {
 
 class CpuAndRamProvider : SignalProvider() {
     override val id = "cpu_and_ram"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         return try {
             val abis = Build.SUPPORTED_ABIS.joinToString(", ")
             val cores = Runtime.getRuntime().availableProcessors()
@@ -2313,68 +2438,150 @@ class CpuAndRamProvider : SignalProvider() {
 
 class WifiDetailsProvider : SignalProvider() {
     override val id = "wifi_details"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val hasWifiState = context.checkSelfPermission(android.Manifest.permission.ACCESS_WIFI_STATE) == PackageManager.PERMISSION_GRANTED
-        val hasLocation = context.checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-                context.checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        
-        val detailedItems = mutableListOf<DetailedItem>()
-        var summaryVal = "Permission Blocked"
-        
-        detailedItems.add(detailedItem("ACCESS_WIFI_STATE Granted", hasWifiState.toString(), "WiFi adapter parameters query permission status", "check"))
-        detailedItems.add(detailedItem("ACCESS_COARSE_LOCATION Granted", hasLocation.toString(), "Geo-location access status (required to query SSID names)", "check"))
-        
+        val hasLocation = context.checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val hasPhoneState = context.checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
+
+        val networkSignals = mutableListOf<FingerprintSignal>()
+
+        // 1. Wi-Fi Details
+        val wifiItems = mutableListOf<DetailedItem>()
+        var wifiRaw = "Permission Blocked"
+        var wifiSensitiveRaw = ""
+        var wifiIsSensitive = false
+
+        wifiItems.add(detailedItem("ACCESS_WIFI_STATE Granted", hasWifiState.toString(), "WiFi adapter parameters query permission status", "check"))
+        wifiItems.add(detailedItem("ACCESS_FINE_LOCATION Granted", hasLocation.toString(), "Geo-location access status (required to query SSID names)", "check"))
+
         if (hasWifiState) {
             try {
                 val wm = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+                @Suppress("DEPRECATION")
                 val info = wm.connectionInfo
-                val bssid = info?.bssid ?: "Unknown BSSID"
-                val ssid = if (hasLocation) {
-                    info?.ssid ?: "Unknown SSID"
-                } else {
-                    "SSID Hidden (Requires Location Permission)"
-                }
-                val rssi = info?.rssi ?: 0
-                val speed = info?.linkSpeed ?: 0
-                
-                detailedItems.add(detailedItem("Connected Router SSID", ssid, "Wireless network name identifier", "wifi"))
-                detailedItems.add(detailedItem("Router BSSID MAC Address", bssid, "Physical MAC address signature of access point", "key"))
-                detailedItems.add(detailedItem("Signal Strength (RSSI)", "$rssi dBm", "Received signal strength indication decibels", "info"))
-                detailedItems.add(detailedItem("Current Link Speed", "$speed Mbps", "Estimated local transmission bandwidth", "info"))
-                
                 if (info != null) {
-                    detailedItems.add(detailedItem("Frequency Band", "${info.frequency} MHz", "Active radio frequency channel", "info"))
-                    detailedItems.add(detailedItem("Network Connection ID", info.networkId.toString(), "System configuration profile ID number", "info"))
+                    val rawBssid = info.bssid
+                    val rawSsid = info.ssid
+                    val rssi = info.rssi
+                    val speed = info.linkSpeed
+                    val frequency = info.frequency
+                    
+                    val bssidMasked = maskBssid(rawBssid)
+                    val ssidMasked = maskSsid(rawSsid)
+                    
+                    wifiItems.add(detailedItem("Connected Router SSID", ssidMasked, "Wireless network name identifier (Masked)", "wifi"))
+                    wifiItems.add(detailedItem("Router BSSID MAC Address", bssidMasked, "Physical MAC address signature of access point (Masked)", "key"))
+                    wifiItems.add(detailedItem("Signal Strength (RSSI)", "$rssi dBm", "Received signal strength indication decibels", "info"))
+                    wifiItems.add(detailedItem("Current Link Speed", "$speed Mbps", "Estimated local transmission bandwidth", "info"))
+                    wifiItems.add(detailedItem("Frequency Band", "$frequency MHz", "Active radio frequency channel", "info"))
+
+                    wifiRaw = "SSID: $ssidMasked | BSSID: $bssidMasked | RSSI: $rssi dBm"
+                    wifiSensitiveRaw = "SSID: $rawSsid | BSSID: $rawBssid"
+                    wifiIsSensitive = rawSsid != null && rawSsid != "<unknown ssid>" && rawBssid != "02:00:00:00:00:00"
+                } else {
+                    wifiRaw = "No Connection"
                 }
-                
-                summaryVal = "SSID: ${if (ssid.startsWith("\"") && ssid.endsWith("\"")) ssid.substring(1, ssid.length - 1) else ssid} | BSSID: $bssid"
             } catch (e: Exception) {
-                detailedItems.add(detailedItem("WiFi Manager Query", "Error: ${e.localizedMessage}", "Query failed", "close"))
-                summaryVal = "Granted (Query Error)"
+                wifiRaw = "Query Error: ${e.localizedMessage}"
             }
-        } else {
-            detailedItems.add(detailedItem("WiFi Parameters", "Access restricted by permission gate", "WiFi state permission denied", "close"))
         }
 
-        return listOf(
+        networkSignals.add(
             FingerprintSignal(
                 id = "wifi_network_details",
                 name = "WiFi Connection Signatures",
                 description = "Scans connected WiFi routers, SSID network names, and BSSID MAC addresses.",
                 category = SignalCategory.NEEDS_PERMISSION,
-                rawValue = summaryVal,
+                rawValue = wifiRaw,
                 narrative = "Querying BSSID MAC addresses allows cross-referencing against global coordinate databases (like Google Location Services), identifying your precise physical address with up to 1-meter accuracy without using GPS.",
                 threatScore = 8,
-                permissionName = android.Manifest.permission.ACCESS_WIFI_STATE,
-                detailedData = listOf(detailedGroup("WiFi Connection Details", detailedItems))
+                permissionName = android.Manifest.permission.ACCESS_FINE_LOCATION,
+                detailedData = listOf(detailedGroup("WiFi Connection Details", wifiItems)),
+                isSensitive = wifiIsSensitive,
+                sensitiveRawValue = if (wifiIsSensitive) wifiSensitiveRaw else null
             )
         )
+
+        // 2. Cellular Details
+        val cellItems = mutableListOf<DetailedItem>()
+        var cellRaw = "Permission Blocked"
+
+        cellItems.add(detailedItem("READ_PHONE_STATE Granted", hasPhoneState.toString(), "Telephony state permission status", "check"))
+        cellItems.add(detailedItem("ACCESS_FINE_LOCATION Granted", hasLocation.toString(), "Location permission status (required for CellInfo & Signal Strength)", "check"))
+
+        try {
+            val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as android.telephony.TelephonyManager
+            val carrierName = tm.networkOperatorName ?: "No Carrier"
+            
+            val netType = if (hasPhoneState || hasLocation) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    tm.dataNetworkType
+                } else {
+                    @Suppress("DEPRECATION")
+                    tm.networkType
+                }
+            } else {
+                android.telephony.TelephonyManager.NETWORK_TYPE_UNKNOWN
+            }
+            
+            val cellGen = getCellularGeneration(netType)
+            
+            var dbm = -1
+            if (hasLocation) {
+                val cellInfo = tm.allCellInfo
+                if (cellInfo != null && cellInfo.isNotEmpty()) {
+                    val info = cellInfo[0]
+                    dbm = when (info) {
+                        is android.telephony.CellInfoLte -> info.cellSignalStrength.dbm
+                        is android.telephony.CellInfoGsm -> info.cellSignalStrength.dbm
+                        is android.telephony.CellInfoWcdma -> info.cellSignalStrength.dbm
+                        is android.telephony.CellInfoCdma -> info.cellSignalStrength.dbm
+                        else -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && info is android.telephony.CellInfoNr) {
+                            info.cellSignalStrength.dbm
+                        } else {
+                            -1
+                        }
+                    }
+                }
+            }
+            
+            if (dbm == -1 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                dbm = tm.signalStrength?.cellSignalStrengths?.firstOrNull()?.dbm ?: -1
+            }
+
+            val dbmStr = if (dbm != -1) "$dbm dBm" else "Unavailable"
+            
+            cellItems.add(detailedItem("SIM Carrier Operator", carrierName.ifEmpty { "Unknown" }, "Public carrier operator name", "phone"))
+            cellItems.add(detailedItem("Cellular Generation", cellGen, "Wireless access technology level (e.g. 4G/5G)", "wifi"))
+            cellItems.add(detailedItem("Cellular Signal Strength", dbmStr, "Signal strength of active cell transceiver", "info"))
+            cellItems.add(detailedItem("Data Network Type", getNetworkTypeString(netType), "Platform network protocol constants code", "info"))
+
+            cellRaw = "Carrier: ${carrierName.ifEmpty { "Unknown" }} | Generation: $cellGen | Signal: $dbmStr"
+        } catch (e: Exception) {
+            cellRaw = "Query Error: ${e.localizedMessage}"
+        }
+
+        networkSignals.add(
+            FingerprintSignal(
+                id = "cellular_network_details",
+                name = "Cellular Network Connection Details",
+                description = "Scans SIM carrier name, active cellular signal strength, and network generation.",
+                category = SignalCategory.NEEDS_PERMISSION,
+                rawValue = cellRaw,
+                narrative = "Querying cell towers and signal strength can be used to track device movement and location triangulation. Combined with WiFi SSID and BSSID, they make offline tracking extremely accurate.",
+                threatScore = 7,
+                permissionName = android.Manifest.permission.ACCESS_FINE_LOCATION,
+                detailedData = listOf(detailedGroup("Cellular Connection Details", cellItems))
+            )
+        )
+
+        return networkSignals
     }
 }
 
 class PhysicalActivityProvider : SignalProvider() {
     override val id = "physical_activity"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val hasPermission = context.checkSelfPermission(android.Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED
         val rawValue = if (hasPermission) "Access Granted" else "Permission Blocked"
         
@@ -2401,7 +2608,7 @@ class PhysicalActivityProvider : SignalProvider() {
 
 class AmbientSensorsProvider : SignalProvider() {
     override val id = "ambient_sensors"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         return try {
             val sm = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
             val light = sm.getDefaultSensor(Sensor.TYPE_LIGHT)
@@ -2453,7 +2660,7 @@ class AmbientSensorsProvider : SignalProvider() {
 
 class AntiAnalysisProvider : SignalProvider() {
     override val id = "anti_analysis"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         return try {
             val isEmulator = Build.FINGERPRINT.startsWith("generic") ||
                     Build.MODEL.contains("google_sdk") ||
@@ -2508,7 +2715,7 @@ class AntiAnalysisProvider : SignalProvider() {
 
 class InputMethodProvider : SignalProvider() {
     override val id = "input_method"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         return try {
             val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
             val list = imm.enabledInputMethodList
@@ -2550,7 +2757,7 @@ class InputMethodProvider : SignalProvider() {
 
 class NfcAndUsbProvider : SignalProvider() {
     override val id = "nfc_and_usb"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         return try {
             val nfcManager = context.getSystemService(Context.NFC_SERVICE) as android.nfc.NfcManager
             val adapter = nfcManager.defaultAdapter
@@ -2591,7 +2798,7 @@ class NfcAndUsbProvider : SignalProvider() {
 
 class SoundStreamsProvider : SignalProvider() {
     override val id = "sound_streams"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         return try {
             val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             val alarm = am.getStreamVolume(AudioManager.STREAM_ALARM)
@@ -2639,7 +2846,7 @@ class SoundStreamsProvider : SignalProvider() {
 
 class BluetoothScanProvider : SignalProvider() {
     override val id = "bluetooth_scan"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val hasPermission = context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
         val rawValue = if (hasPermission) "Access Granted" else "Permission Blocked"
         
@@ -2666,7 +2873,7 @@ class BluetoothScanProvider : SignalProvider() {
 
 class ExternalMediaProvider : SignalProvider() {
     override val id = "external_media"
-    override fun provideSignals(context: Context): List<FingerprintSignal> {
+    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val hasPermission = context.checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
         
         val detailedItems = mutableListOf<DetailedItem>()
@@ -2739,3 +2946,90 @@ class ExternalMediaProvider : SignalProvider() {
         )
     }
 }
+
+private fun maskSsid(ssid: String?): String {
+    if (ssid == null || ssid.isEmpty() || ssid == "<unknown ssid>") return "Hidden/Restricted"
+    val clean = if (ssid.startsWith("\"") && ssid.endsWith("\"")) ssid.substring(1, ssid.length - 1) else ssid
+    if (clean.length <= 4) return "$clean***"
+    return clean.take(4) + "***"
+}
+
+private fun maskBssid(bssid: String?): String {
+    if (bssid == null || bssid.isEmpty() || bssid == "02:00:00:00:00:00") return "Hidden/Restricted"
+    val parts = bssid.split(":")
+    if (parts.size == 6) {
+        return "${parts[0]}:${parts[1]}:${parts[2]}:XX:XX:XX"
+    }
+    return bssid.take(8) + "***"
+}
+
+private fun maskBluetoothName(name: String?): String {
+    if (name == null || name.isEmpty()) return "Unnamed Peripheral"
+    if (name.length <= 4) return "$name***"
+    return name.take(4) + "***"
+}
+
+private fun maskBluetoothAddress(address: String?): String {
+    if (address == null || address.isEmpty() || address == "02:00:00:00:00:00") return "Hidden/Restricted"
+    val parts = address.split(":")
+    if (parts.size == 6) {
+        return "${parts[0]}:${parts[1]}:${parts[2]}:XX:XX:XX"
+    }
+    return address.take(8) + "***"
+}
+
+private fun getCellularGeneration(networkType: Int): String {
+    return when (networkType) {
+        android.telephony.TelephonyManager.NETWORK_TYPE_GPRS,
+        android.telephony.TelephonyManager.NETWORK_TYPE_EDGE,
+        android.telephony.TelephonyManager.NETWORK_TYPE_CDMA,
+        android.telephony.TelephonyManager.NETWORK_TYPE_1xRTT,
+        android.telephony.TelephonyManager.NETWORK_TYPE_IDEN,
+        android.telephony.TelephonyManager.NETWORK_TYPE_GSM -> "2G"
+        
+        android.telephony.TelephonyManager.NETWORK_TYPE_UMTS,
+        android.telephony.TelephonyManager.NETWORK_TYPE_EVDO_0,
+        android.telephony.TelephonyManager.NETWORK_TYPE_EVDO_A,
+        android.telephony.TelephonyManager.NETWORK_TYPE_HSDPA,
+        android.telephony.TelephonyManager.NETWORK_TYPE_HSUPA,
+        android.telephony.TelephonyManager.NETWORK_TYPE_HSPA,
+        android.telephony.TelephonyManager.NETWORK_TYPE_EVDO_B,
+        android.telephony.TelephonyManager.NETWORK_TYPE_EHRPD,
+        android.telephony.TelephonyManager.NETWORK_TYPE_HSPAP,
+        android.telephony.TelephonyManager.NETWORK_TYPE_TD_SCDMA -> "3G"
+        
+        android.telephony.TelephonyManager.NETWORK_TYPE_LTE,
+        android.telephony.TelephonyManager.NETWORK_TYPE_IWLAN,
+        19 -> "4G" // NETWORK_TYPE_LTE_CA is 19
+        
+        android.telephony.TelephonyManager.NETWORK_TYPE_NR -> "5G"
+        
+        else -> "Unknown"
+    }
+}
+
+private fun getNetworkTypeString(networkType: Int): String {
+    return when (networkType) {
+        android.telephony.TelephonyManager.NETWORK_TYPE_GPRS -> "GPRS"
+        android.telephony.TelephonyManager.NETWORK_TYPE_EDGE -> "EDGE"
+        android.telephony.TelephonyManager.NETWORK_TYPE_UMTS -> "UMTS"
+        android.telephony.TelephonyManager.NETWORK_TYPE_CDMA -> "CDMA"
+        android.telephony.TelephonyManager.NETWORK_TYPE_EVDO_0 -> "EVDO_0"
+        android.telephony.TelephonyManager.NETWORK_TYPE_EVDO_A -> "EVDO_A"
+        android.telephony.TelephonyManager.NETWORK_TYPE_1xRTT -> "1xRTT"
+        android.telephony.TelephonyManager.NETWORK_TYPE_HSDPA -> "HSDPA"
+        android.telephony.TelephonyManager.NETWORK_TYPE_HSUPA -> "HSUPA"
+        android.telephony.TelephonyManager.NETWORK_TYPE_HSPA -> "HSPA"
+        android.telephony.TelephonyManager.NETWORK_TYPE_IDEN -> "IDEN"
+        android.telephony.TelephonyManager.NETWORK_TYPE_EVDO_B -> "EVDO_B"
+        android.telephony.TelephonyManager.NETWORK_TYPE_LTE -> "LTE"
+        android.telephony.TelephonyManager.NETWORK_TYPE_EHRPD -> "EHRPD"
+        android.telephony.TelephonyManager.NETWORK_TYPE_HSPAP -> "HSPAP"
+        android.telephony.TelephonyManager.NETWORK_TYPE_GSM -> "GSM"
+        android.telephony.TelephonyManager.NETWORK_TYPE_TD_SCDMA -> "TD_SCDMA"
+        android.telephony.TelephonyManager.NETWORK_TYPE_IWLAN -> "IWLAN"
+        android.telephony.TelephonyManager.NETWORK_TYPE_NR -> "NR (5G)"
+        else -> "UNKNOWN"
+    }
+}
+

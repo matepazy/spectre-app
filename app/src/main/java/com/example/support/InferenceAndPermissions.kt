@@ -21,7 +21,7 @@ object AppInferenceEngine {
         // Concatenate non-empty raw values to generate a unique hash
         val concatenatedValues = signals
             .filter { it.rawValue != "Permission Blocked" && it.rawValue.isNotEmpty() }
-            .joinToString(separator = "|") { "${it.id}:${it.rawValue}" }
+            .joinToString(separator = "|") { "${it.id}:${it.getSignatureValue()}" }
             
         val deviceSignature = generateSha256(concatenatedValues)
         
@@ -132,7 +132,9 @@ object PermissionCenter {
         android.Manifest.permission.ACTIVITY_RECOGNITION,
         android.Manifest.permission.ACCESS_WIFI_STATE,
         android.Manifest.permission.BLUETOOTH_SCAN,
-        android.Manifest.permission.READ_EXTERNAL_STORAGE
+        android.Manifest.permission.READ_EXTERNAL_STORAGE,
+        "android.permission.QUERY_ALL_PACKAGES",
+        android.Manifest.permission.ACCESS_NETWORK_STATE
     )
     
     fun getPermissionDisplayNames(permission: String): String {
@@ -154,6 +156,8 @@ object PermissionCenter {
             android.Manifest.permission.ACCESS_WIFI_STATE -> "Read WiFi Network SSID/Details"
             android.Manifest.permission.BLUETOOTH_SCAN -> "Scan for Nearby Beacons/BLE"
             android.Manifest.permission.READ_EXTERNAL_STORAGE -> "Access Media/Photo Libraries"
+            "android.permission.QUERY_ALL_PACKAGES" -> "Query All Installed Packages"
+            android.Manifest.permission.ACCESS_NETWORK_STATE -> "Read Network Connection State"
             else -> permission.substringAfterLast(".")
         }
     }
@@ -202,6 +206,12 @@ object PermissionCenter {
                 } else {
                     arrayOf(permissionName)
                 }
+            }
+            "android.permission.QUERY_ALL_PACKAGES" -> {
+                emptyArray()
+            }
+            "android.permission.ACCESS_NETWORK_STATE" -> {
+                emptyArray()
             }
             else -> {
                 arrayOf(permissionName)
