@@ -9,7 +9,7 @@
 [![License](https://img.shields.io/badge/license-GPLv3-blue)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/matepazy/spectre-app?include_prereleases&label=release)](https://github.com/matepazy/spectre-app/releases)
 
-**Spectre** is an educational Android app that shows you exactly what your device reveals about itself — to any app, without asking.
+**Spectre** is an educational Android app that shows you exactly what your device reveals about itself to any app, without asking.
 
 It collects over **60 distinct device signals** across hardware, software, network, and sensor layers, then computes a real-time fingerprint score so you can see how identifiable your device actually is.
 
@@ -20,10 +20,7 @@ It collects over **60 distinct device signals** across hardware, software, netwo
 Every app you install can silently read a surprising amount of data from your device — before asking for a single permission. Spectre makes that invisible surface visible.
 
 Open it, and within seconds you'll see:
-- Your device's **tracking risk score** and **uniqueness index**, computed locally
 - Which signals are **freely available** to any app, which require **user consent**, and which can be extracted via **side-channels**
-- A **SHA-256 device signature** derived from the combination of your active signals
-- Which specific signals carry the highest **individual threat score**
 - Real-time updates as sensors, battery state, and network conditions change
 
 > Everything is computed **on-device**. No data is sent anywhere.
