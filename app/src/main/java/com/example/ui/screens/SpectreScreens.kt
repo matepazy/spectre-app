@@ -57,7 +57,11 @@ import com.matepazy.spectre.ui.theme.*
 import com.matepazy.spectre.viewmodel.SpectreViewModel
 import android.content.ContextWrapper
 import androidx.biometric.BiometricPrompt
+import android.graphics.drawable.Drawable
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
 import dev.chrisbanes.haze.haze
 import dev.chrisbanes.haze.hazeChild
 import dev.chrisbanes.haze.HazeState
@@ -220,25 +224,25 @@ fun LockScreen(onUnlockSuccess: () -> Unit) {
         ) {
             Box(
                 modifier = Modifier
-                    .size(90.dp)
+                    .size(72.dp)
                     .clip(CircleShape)
-                    .background(CyberRed.copy(alpha = 0.1f))
-                    .border(1.5.dp, CyberRed, CircleShape),
+                    .background(SpectrePurple.copy(alpha = 0.08f))
+                    .border(1.dp, SpectrePurple.copy(alpha = 0.2f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Lock,
-                    contentDescription = "Cryptographic Lock Icon",
-                    tint = CyberRed,
-                    modifier = Modifier.size(44.dp)
+                    contentDescription = "Lock",
+                    tint = SpectrePurple,
+                    modifier = Modifier.size(32.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Text(
                 text = "Spectre Locked",
-                fontSize = 22.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = CyberTextPrimary
             )
@@ -246,18 +250,18 @@ fun LockScreen(onUnlockSuccess: () -> Unit) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "This application is locked with device biometrics to protect sensitive device audit logs.",
+                text = "This application is locked to protect sensitive device logs. Authenticate using device security to proceed.",
                 fontSize = 12.sp,
                 color = CyberTextSecondary,
                 textAlign = TextAlign.Center,
                 lineHeight = 18.sp,
-                modifier = Modifier.padding(horizontal = 16.dp)
+                modifier = Modifier.padding(horizontal = 24.dp)
             )
 
             if (errorMessage != null) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Status: $errorMessage",
+                    text = errorMessage!!,
                     fontSize = 12.sp,
                     color = CyberRed,
                     textAlign = TextAlign.Center,
@@ -267,7 +271,7 @@ fun LockScreen(onUnlockSuccess: () -> Unit) {
                 )
             }
 
-            Spacer(modifier = Modifier.height(36.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             if (isBiometricEnrolled) {
                 Button(
@@ -280,7 +284,7 @@ fun LockScreen(onUnlockSuccess: () -> Unit) {
                         )
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = SpectrePurple),
-                    shape = RoundedCornerShape(100),
+                    shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.height(48.dp)
                 ) {
                     Icon(
@@ -297,32 +301,32 @@ fun LockScreen(onUnlockSuccess: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(CyberOrange.copy(alpha = 0.08f))
-                        .border(1.dp, CyberOrange.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                        .background(CyberDarkBg)
+                        .border(1.dp, CyberBorder, RoundedCornerShape(12.dp))
                         .padding(16.dp)
                 ) {
                     Text(
                         text = "Biometrics Unavailable",
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = CyberOrange
+                        color = CyberTextPrimary
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Physical biometric sensors (fingerprint/face) are absent or unenrolled in this environment.",
+                        text = "No biometric sensors are configured or available on this device.",
                         fontSize = 11.sp,
                         color = CyberTextSecondary,
                         textAlign = TextAlign.Center
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
                     Button(
                         onClick = onUnlockSuccess,
-                        colors = ButtonDefaults.buttonColors(containerColor = CyberOrange),
-                        shape = RoundedCornerShape(100),
-                        modifier = Modifier.height(38.dp)
+                        colors = ButtonDefaults.buttonColors(containerColor = SpectrePurple),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.height(40.dp)
                     ) {
                         Icon(imageVector = Icons.Default.Verified, contentDescription = null, tint = Color.White)
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text("Bypass Authentication", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
@@ -380,52 +384,12 @@ fun SpectreAppContainer(viewModel: SpectreViewModel) {
 @Composable
 fun OnboardingView(onOnboardingComplete: () -> Unit) {
     var step by remember { mutableIntStateOf(1) }
-    val hazeState = remember { HazeState() }
     
-    val gradientBrush = Brush.verticalGradient(
-        colors = listOf(CyberDarkBg, Color(0xFFECEAF8))
-    )
-
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(gradientBrush)
+            .background(CyberDarkBg)
     ) {
-        // Background container with haze applied, drawing the mesh blobs
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .haze(hazeState)
-        ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val width = size.width
-                val height = size.height
-                
-                // Dynamic Blob 1: Top-Right area (changes color based on step)
-                val blob1Color = when (step) {
-                    1 -> CyberGreen.copy(alpha = 0.22f)
-                    2 -> CyberBlue.copy(alpha = 0.22f)
-                    else -> SpectrePurple.copy(alpha = 0.22f)
-                }
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(blob1Color, Color.Transparent),
-                        center = Offset(width * 0.85f, height * 0.3f),
-                        radius = width * 0.7f
-                    )
-                )
-
-                // Blob 2: Bottom-Left area (complementary neon purple glow)
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(SpectrePurple.copy(alpha = 0.18f), Color.Transparent),
-                        center = Offset(width * 0.15f, height * 0.7f),
-                        radius = width * 0.75f
-                    )
-                )
-            }
-        }
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -434,26 +398,26 @@ fun OnboardingView(onOnboardingComplete: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // App Logo / Header
+            // App Header (persistent)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(top = 16.dp)
             ) {
                 SpectreLogo(
-                    modifier = Modifier.size(54.dp),
+                    modifier = Modifier.size(36.dp),
                     color = SpectrePurple
                 )
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Spectre",
-                    fontSize = 32.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.SansSerif,
                     color = CyberTextPrimary
                 )
             }
 
-            // Center Content with Slide Transition
+            // Center Content
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -475,25 +439,22 @@ fun OnboardingView(onOnboardingComplete: () -> Unit) {
                 ) { currentStep ->
                     when (currentStep) {
                         1 -> OnboardingStepCard(
-                            hazeState = hazeState,
                             icon = Icons.Default.Radar,
-                            title = "Analyze Telemetry & Leakage",
-                            description = "Every mobile device exposes unique hardware and software signals—such as system configurations, battery behaviors, and screen properties. Trackers compile these data points into a distinct digital signature to identify you. Spectre runs a local analysis to show you exactly what is visible.",
+                            title = "Telemetry Analysis",
+                            description = "Every mobile device exposes unique configurations, battery behaviors, and screen properties. Trackers compile these data points into a digital signature to identify you. Spectre runs a local analysis to show you exactly what is visible.",
                             tint = CyberGreen
                         )
                         2 -> OnboardingStepCard(
-                            hazeState = hazeState,
                             icon = Icons.Default.Security,
-                            title = "Understand Risk Categories",
-                            description = "Spectre analyzes signals across three security levels:\n\n• PASSIVE: Public data accessible silently without any permissions.\n• RESTRICTED: Protected data requiring standard Android permissions.\n• ADVANCED: Deep hardware identifiers and unique browser hashes.",
-                            tint = CyberBlue
+                            title = "Risk Classification",
+                            description = "Spectre organizes signals across three privacy categories:\n\n• Passive: Public data accessible silently without any permissions.\n• Needs Permission: Protected data requiring standard Android permission approval.\n• Advanced: Deep hardware identifiers and unique browser hashes.",
+                            tint = SpectrePurple
                         )
                         3 -> OnboardingStepCard(
-                            hazeState = hazeState,
                             icon = Icons.Default.Shield,
                             title = "100% Offline & Private",
                             description = "Your privacy is our priority. All analysis runs completely on-device, offline, and locally. Absolutely no data is uploaded to any servers. Continue to scan and inspect your device's telemetry footprint.",
-                            tint = SpectrePurple
+                            tint = CyberBlue
                         )
                     }
                 }
@@ -504,41 +465,40 @@ fun OnboardingView(onOnboardingComplete: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Indicator dots
+                // Segmented Step Indicator
                 Row(
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(bottom = 24.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(bottom = 24.dp).width(120.dp)
                 ) {
                     for (i in 1..3) {
                         Box(
                             modifier = Modifier
-                                .padding(horizontal = 4.dp)
-                                .size(width = if (step == i) 20.dp else 8.dp, height = 8.dp)
-                                .clip(CircleShape)
-                                .background(if (step == i) SpectrePurple else CyberBorder.copy(alpha = 0.8f))
+                                .weight(1f)
+                                .height(4.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(if (step >= i) SpectrePurple else CyberBorder)
                         )
                     }
                 }
 
-                // Navigation Buttons
+                // Buttons
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     if (step > 1) {
                         OutlinedButton(
                             onClick = { step-- },
                             modifier = Modifier
                                 .height(48.dp)
-                                .weight(1f)
-                                .padding(end = 8.dp),
+                                .weight(1f),
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = SpectrePurple
                             ),
-                            border = BorderStroke(1.5.dp, SpectrePurple.copy(alpha = 0.3f)),
-                            shape = RoundedCornerShape(100)
+                            border = BorderStroke(1.dp, CyberBorder),
+                            shape = RoundedCornerShape(8.dp)
                         ) {
                             Text("Back", fontWeight = FontWeight.Bold)
                         }
@@ -555,27 +515,18 @@ fun OnboardingView(onOnboardingComplete: () -> Unit) {
                         modifier = Modifier
                             .height(48.dp)
                             .weight(1f)
-                            .padding(start = if (step > 1) 8.dp else 0.dp)
                             .testTag("onboarding_next_button"),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (step == 3) CyberGreen else SpectrePurple,
+                            containerColor = SpectrePurple,
                             contentColor = Color.White
                         ),
-                        shape = RoundedCornerShape(100)
+                        shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(
-                            text = if (step == 3) "Agree & Scan" else "Continue",
+                            text = if (step == 3) "Start Scanning" else "Continue",
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
                         )
-                        if (step < 3) {
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Default.ArrowForward,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
                     }
                 }
             }
@@ -585,32 +536,18 @@ fun OnboardingView(onOnboardingComplete: () -> Unit) {
 
 @Composable
 fun OnboardingStepCard(
-    hazeState: HazeState,
     icon: ImageVector,
     title: String,
     description: String,
     tint: Color
 ) {
-    Box(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .background(Color.White.copy(alpha = 0.45f))
-            .hazeChild(
-                state = hazeState,
-                style = HazeStyle(
-                    backgroundColor = CyberDarkBg,
-                    blurRadius = 24.dp,
-                    tints = listOf(HazeTint(color = CyberDarkBg.copy(alpha = 0.25f))),
-                    noiseFactor = 0.1f
-                )
-            )
-            .border(
-                width = 1.dp,
-                color = tint.copy(alpha = 0.4f),
-                shape = RoundedCornerShape(24.dp)
-            )
+            .padding(12.dp),
+        colors = CardDefaults.cardColors(containerColor = CyberCardBg),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, CyberBorder)
     ) {
         Column(
             modifier = Modifier.padding(24.dp),
@@ -618,15 +555,15 @@ fun OnboardingStepCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(tint.copy(alpha = 0.1f))
-                    .border(1.dp, tint.copy(alpha = 0.3f), RoundedCornerShape(16.dp)),
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(tint.copy(alpha = 0.08f))
+                    .border(1.dp, tint.copy(alpha = 0.2f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 if (icon == Icons.Default.Radar) {
                     SpectreLogo(
-                        modifier = Modifier.size(54.dp),
+                        modifier = Modifier.size(36.dp),
                         color = tint
                     )
                 } else {
@@ -634,12 +571,12 @@ fun OnboardingStepCard(
                         imageVector = icon,
                         contentDescription = null,
                         tint = tint,
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 }
             }
             
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             
             Text(
                 text = title,
@@ -649,7 +586,7 @@ fun OnboardingStepCard(
                 color = CyberTextPrimary
             )
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             
             Text(
                 text = description,
@@ -716,7 +653,6 @@ fun HomeView(
             Box(
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Background Layer for Glassmorphism
                 Box(
                     modifier = Modifier
                         .matchParentSize()
@@ -731,7 +667,6 @@ fun HomeView(
                         )
                 )
 
-                // Bottom border to define the glass card edge
                 Spacer(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -744,24 +679,24 @@ fun HomeView(
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             SpectreLogo(
-                                modifier = Modifier.size(36.dp),
+                                modifier = Modifier.size(28.dp),
                                 color = SpectrePurple
                             )
-                            Spacer(modifier = Modifier.width(10.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Spectre",
                                 fontWeight = FontWeight.Bold,
                                 fontFamily = FontFamily.SansSerif,
                                 color = CyberTextPrimary,
-                                fontSize = 24.sp
+                                fontSize = 20.sp
                             )
                         }
                     },
                     actions = {
                         IconButton(onClick = { showAboutView = true }) {
                             Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = "About App",
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Settings",
                                 tint = CyberTextSecondary
                             )
                         }
@@ -777,7 +712,6 @@ fun HomeView(
             Box(
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Background Layer for Glassmorphism
                 Box(
                     modifier = Modifier
                         .matchParentSize()
@@ -792,7 +726,6 @@ fun HomeView(
                         )
                 )
 
-                // Top border to define the glass card edge for bottom bar
                 Spacer(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -836,7 +769,7 @@ fun HomeView(
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = indicatorColor,
                                 selectedTextColor = indicatorColor,
-                                indicatorColor = indicatorColor.copy(alpha = 0.12f),
+                                indicatorColor = indicatorColor.copy(alpha = 0.08f),
                                 unselectedIconColor = CyberTextSecondary,
                                 unselectedTextColor = CyberTextSecondary
                             ),
@@ -865,7 +798,6 @@ fun HomeView(
             val showFullScreenLoader = uiState.isScanning && uiState.signals.isEmpty()
             
             if (showFullScreenLoader) {
-                // scanning loader state
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -894,7 +826,6 @@ fun HomeView(
                     }
                 }
             } else {
-                // Core Screen Content wrapped with PullToRefreshBox
                 PullToRefreshBox(
                     isRefreshing = uiState.isScanning,
                     onRefresh = { viewModel.refreshSignals(context) },
@@ -923,7 +854,6 @@ fun HomeView(
                             }
                         }
 
-                        // Filtered signal rows
                         val filteredSignals = uiState.signals.filter { it.category == uiState.selectedCategory }
                         if (filteredSignals.isEmpty()) {
                             item {
@@ -977,7 +907,6 @@ fun HomeView(
                             }
                         }
 
-                        // Small structural padding
                         item {
                             Spacer(modifier = Modifier.height(72.dp))
                         }
@@ -987,25 +916,14 @@ fun HomeView(
         }
     }
 
-    // Export Dialog Overlay
-    if (showExportDialog && uiState.inferenceResult != null) {
-        Dialog(
-            onDismissRequest = { showExportDialog = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            ExportView(
-                signals = uiState.signals,
-                inference = uiState.inferenceResult,
-                onDismiss = { showExportDialog = false }
-            )
-        }
-    }
-
-    // About Dialog Overlay
+    // About Dialog Overlay (using ModalBottomSheet)
     if (showAboutView) {
-        Dialog(
+        ModalBottomSheet(
             onDismissRequest = { showAboutView = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = CyberCardBg,
+            scrimColor = Color.Black.copy(alpha = 0.4f),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
         ) {
             AboutView(
                 onDismiss = { showAboutView = false },
@@ -1028,7 +946,7 @@ fun HomeView(
 
     if (showUpdateDetailsDialog && activeUpdateDetails != null) {
         val update = activeUpdateDetails!!
-        UpdateDetailsDialog(
+        UpdateDetailsSheet(
             version = update.version,
             notes = update.notes,
             downloadUrl = update.downloadUrl,
@@ -1040,11 +958,14 @@ fun HomeView(
         )
     }
 
-    // Detailed Registry Dialog Overlay
+    // Detailed Registry Dialog Overlay (using ModalBottomSheet)
     if (activeDetailedSignal != null) {
-        Dialog(
+        ModalBottomSheet(
             onDismissRequest = { activeDetailedSignal = null },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = CyberCardBg,
+            scrimColor = Color.Black.copy(alpha = 0.4f),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
         ) {
             DetailedRegistryView(
                 signal = activeDetailedSignal!!,
@@ -1594,8 +1515,6 @@ fun SignalRowView(
     onActionClick: () -> Unit,
     onDetailClick: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    
     val categoryColor = when (signal.category) {
         SignalCategory.PASSIVE -> CyberGreen
         SignalCategory.NEEDS_PERMISSION -> SpectrePurple
@@ -1603,41 +1522,45 @@ fun SignalRowView(
     }
     
     val signalIcon = remember(signal.id) { getSignalIcon(signal.id) }
+    val isBlocked = signal.rawValue == "Permission Blocked"
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { expanded = !expanded }
-            .animateContentSize(
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                )
-            )
+            .clickable {
+                if (isBlocked && signal.permissionName != null) {
+                    onActionClick()
+                } else {
+                    onDetailClick()
+                }
+            }
             .testTag("signal_row_${signal.id}"),
         colors = CardDefaults.cardColors(containerColor = CyberCardBg),
-        border = BorderStroke(1.dp, if (expanded) categoryColor.copy(alpha = 0.5f) else CyberBorder),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        border = BorderStroke(1.dp, CyberBorder),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Individual Signal Icon instead of generic Category Icon
                 Box(
                     modifier = Modifier
-                        .size(24.dp)
+                        .size(32.dp)
                         .clip(CircleShape)
-                        .background(categoryColor.copy(alpha = 0.12f)),
+                        .background(categoryColor.copy(alpha = 0.08f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = signalIcon,
                         contentDescription = signal.name,
                         tint = categoryColor,
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
                 
@@ -1650,7 +1573,7 @@ fun SignalRowView(
                         fontWeight = FontWeight.Bold,
                         color = CyberTextPrimary
                     )
-                    Spacer(modifier = Modifier.height(1.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = signal.description,
                         fontSize = 11.sp,
@@ -1659,163 +1582,42 @@ fun SignalRowView(
                     )
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
-                // Raw value chip and interactive chevron indicator if detailedData is available
-                if (signal.detailedData != null) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(
-                                if (signal.rawValue == "Permission Blocked") CyberRed.copy(alpha = 0.1f)
-                                else CyberBorder.copy(alpha = 0.4f)
-                            )
-                            .border(
-                                1.dp,
-                                if (signal.rawValue == "Permission Blocked") CyberRed.copy(alpha = 0.4f)
-                                else categoryColor.copy(alpha = 0.5f),
-                                RoundedCornerShape(8.dp)
-                            )
-                            .clickable { onDetailClick() }
-                            .padding(horizontal = 8.dp, vertical = 6.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = if (signal.rawValue.length > 20) signal.rawValue.take(17) + "..." else signal.rawValue,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = FontFamily.Monospace,
-                                color = if (signal.rawValue == "Permission Blocked") CyberRed else CyberTextPrimary
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Icon(
-                                imageVector = Icons.Default.ChevronRight,
-                                contentDescription = "View Detailed Registry",
-                                tint = categoryColor,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(
-                                if (signal.rawValue == "Permission Blocked") CyberRed.copy(alpha = 0.1f)
-                                else CyberBorder
-                            )
-                            .border(
-                                0.5.dp,
-                                if (signal.rawValue == "Permission Blocked") CyberRed.copy(alpha = 0.3f)
-                                else CyberBorder,
-                                RoundedCornerShape(8.dp)
-                            )
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = if (signal.rawValue.length > 25) signal.rawValue.take(22) + "..." else signal.rawValue,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace,
-                            color = if (signal.rawValue == "Permission Blocked") CyberRed else CyberTextPrimary
-                        )
-                    }
-                }
-            }
-
-            if (expanded) {
-                HorizontalDivider(
-                    color = CyberBorder,
-                    modifier = Modifier.padding(vertical = 12.dp)
-                )
-
-                Text(
-                    text = "Privacy Implications",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = CyberBlue
-                )
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                
-                Text(
-                    text = getTrackingRiskExplanation(signal),
-                    fontSize = 12.sp,
-                    color = CyberTextSecondary,
-                    lineHeight = 18.sp
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = "Raw Value",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = CyberTextSecondary
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                val clipboard = LocalClipboardManager.current
-                val localContext = LocalContext.current
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
-                        .background(CyberBorder.copy(alpha = 0.5f))
-                        .clickable {
-                            clipboard.setText(AnnotatedString(signal.rawValue))
-                            Toast.makeText(localContext, "Copied raw value!", Toast.LENGTH_SHORT).show()
-                        }
-                        .padding(8.dp)
+                        .background(
+                            if (isBlocked) CyberRed.copy(alpha = 0.08f)
+                            else CyberBorder.copy(alpha = 0.3f)
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = if (isBlocked) CyberRed.copy(alpha = 0.2f) else CyberBorder,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
+                        horizontalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = signal.rawValue,
+                            text = if (signal.rawValue.length > 20) signal.rawValue.take(17) + "..." else signal.rawValue,
                             fontSize = 11.sp,
-                            fontFamily = FontFamily.Monospace,
-                            color = CyberTextPrimary,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Icon(
-                            imageVector = Icons.Default.ContentCopy,
-                            contentDescription = "Copy Raw Value",
-                            tint = CyberTextSecondary,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                }
-
-                // If permission gate and blocked, show button to unlock
-                if (signal.rawValue == "Permission Blocked" && signal.permissionName != null) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Button(
-                        onClick = onActionClick,
-                        colors = ButtonDefaults.buttonColors(containerColor = CyberOrange),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(100)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.LockOpen,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = Color.White
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Grant ${signal.permissionName.substringAfterLast(".")}",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp,
-                            color = Color.White
+                            fontFamily = FontFamily.Monospace,
+                            color = if (isBlocked) CyberRed else CyberTextPrimary
                         )
+                        if (signal.detailedData != null) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = "Details",
+                                tint = categoryColor,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -1951,7 +1753,6 @@ fun ExportView(
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
 
-    // Synthesize structured JSON
     val jsonReport = remember(signals) {
         val sb = java.lang.StringBuilder()
         sb.append("{\n")
@@ -1964,7 +1765,6 @@ fun ExportView(
             sb.append("      \"id\": \"${sig.id}\",\n")
             sb.append("      \"name\": \"${sig.name}\",\n")
             sb.append("      \"category\": \"${sig.category.name}\",\n")
-            // Escape quotes inside raw values
             val escapedVal = sig.rawValue.replace("\"", "\\\"").replace("\n", " ")
             sb.append("      \"raw_value\": \"$escapedVal\"\n")
             sb.append("    }${if (idx == signals.size - 1) "" else ","}\n")
@@ -1974,12 +1774,10 @@ fun ExportView(
         sb.toString()
     }
 
-    // Synthesize PlainText Report
     val plainReport = remember(signals) {
         val sb = java.lang.StringBuilder()
         sb.append("=========================================\n")
-        sb.append("SPECTRE: DEVICE DIAGNOSTIC AND PRIVACY REPORT\n")
-        sb.append("Generated local time: 2026-07-05\n")
+        sb.append("SPECTRE REPORT\n")
         sb.append("=========================================\n")
         sb.append("Fingerprint Hash (SHA-256): ${inference.deviceSignature}\n")
         sb.append("Collectible Parameters Scanned: ${signals.size}\n\n")
@@ -1988,130 +1786,110 @@ fun ExportView(
         signals.forEach { sig ->
             sb.append("- [${sig.category.title}] ${sig.name} : ${sig.rawValue}\n")
         }
-        sb.append("\nReport prepared offline by Spectre for local privacy-awareness verification.\n")
+        sb.append("\nReport prepared offline by Spectre.\n")
         sb.toString()
     }
 
-    Card(
+    Column(
         modifier = Modifier
-            .fillMaxWidth(0.96f)
-            .padding(vertical = 24.dp)
-            .wrapContentHeight(),
-        colors = CardDefaults.cardColors(containerColor = CyberCardBg),
-        border = BorderStroke(1.dp, CyberBorder),
-        shape = RoundedCornerShape(12.dp)
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 24.dp)
+            .padding(bottom = 24.dp)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.Share,
+                contentDescription = null,
+                tint = SpectrePurple,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Export Scan Data",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = CyberTextPrimary
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = "Export the collected device metrics as structured audit reports.",
+            fontSize = 13.sp,
+            color = CyberTextSecondary,
+            lineHeight = 18.sp
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(CyberBorder.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                .border(1.dp, CyberBorder, RoundedCornerShape(12.dp))
+                .padding(16.dp)
+        ) {
+            Text(
+                text = "Report SHA-256 Fingerprint",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = CyberBlue
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = inference.deviceSignature,
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace,
+                color = CyberTextPrimary,
+                lineHeight = 16.sp
+            )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(
+                onClick = {
+                    clipboard.setText(AnnotatedString(jsonReport))
+                    Toast.makeText(context, "Copied JSON to clipboard!", Toast.LENGTH_SHORT).show()
+                },
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = CyberTextPrimary),
+                border = BorderStroke(1.dp, CyberBorder),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(44.dp),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("Copy JSON", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
+
+            Button(
+                onClick = {
+                    val shareIntent = Intent().apply {
+                        action = Intent.ACTION_SEND
+                        putExtra(Intent.EXTRA_TEXT, plainReport)
+                        type = "text/plain"
+                    }
+                    context.startActivity(Intent.createChooser(shareIntent, "Share Spectre Report"))
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = SpectrePurple),
+                modifier = Modifier.weight(1.2f),
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = PaddingValues(vertical = 12.dp)
+            ) {
                 Icon(
                     imageVector = Icons.Default.Share,
                     contentDescription = null,
-                    tint = CyberBlue,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(14.dp),
+                    tint = Color.White
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Export Privacy Audit",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = CyberTextPrimary
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                text = "Export your local audited device parameters in machine-readable JSON or standard plain-text formatting. You can copy the code directly or share it with external audit centers.",
-                fontSize = 12.sp,
-                color = CyberTextSecondary,
-                lineHeight = 16.sp
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Preview Box
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(CyberDarkBg)
-                    .border(1.dp, CyberBorder, RoundedCornerShape(8.dp))
-                    .verticalScroll(rememberScrollState())
-                    .padding(10.dp)
-            ) {
-                Text(
-                    text = jsonReport,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 10.sp,
-                    color = CyberTextPrimary
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                OutlinedButton(
-                    onClick = onDismiss,
-                    border = BorderStroke(1.5.dp, CyberBorder),
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(100)
-                ) {
-                    Text("Close", color = CyberTextPrimary)
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Button(
-                    onClick = {
-                        clipboard.setText(AnnotatedString(jsonReport))
-                        Toast.makeText(context, "JSON report copied!", Toast.LENGTH_SHORT).show()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = SpectrePurple.copy(alpha = 0.15f)),
-                    modifier = Modifier.weight(1.2f),
-                    shape = RoundedCornerShape(100)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ContentCopy,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = SpectrePurple
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Copy JSON", color = SpectrePurple, fontSize = 12.sp)
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Button(
-                    onClick = {
-                        try {
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_SUBJECT, "Spectre Hardware Fingerprint")
-                                putExtra(Intent.EXTRA_TEXT, plainReport)
-                            }
-                            context.startActivity(Intent.createChooser(shareIntent, "Share Privacy Audit"))
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "Sharing failed", Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = SpectrePurple),
-                    modifier = Modifier.weight(1.2f),
-                    shape = RoundedCornerShape(100)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = Color.White
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Share", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Share", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -2132,79 +1910,159 @@ fun AboutView(
     val updateChannel by viewModel.updateChannel.collectAsState()
     val updateState by viewModel.updateState.collectAsState()
 
-    Card(
+    val appIconDrawable = remember(context) {
+        try {
+            context.packageManager.getApplicationIcon(context.packageName)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    Column(
         modifier = Modifier
-            .fillMaxWidth(0.96f)
-            .padding(vertical = 24.dp)
-            .wrapContentHeight(),
-        colors = CardDefaults.cardColors(containerColor = CyberCardBg),
-        border = BorderStroke(1.dp, CyberBorder),
-        shape = RoundedCornerShape(12.dp)
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 24.dp)
+            .padding(bottom = 24.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(8.dp)),
+            contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(CyberBlue.copy(alpha = 0.1f))
-                    .border(1.dp, CyberBlue, RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center
-            ) {
+            if (appIconDrawable != null) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    drawIntoCanvas { canvas ->
+                        appIconDrawable.setBounds(0, 0, size.width.toInt(), size.height.toInt())
+                        appIconDrawable.draw(canvas.nativeCanvas)
+                    }
+                }
+            } else {
                 SpectreLogo(
-                    modifier = Modifier.size(36.dp),
-                    color = CyberBlue
+                    modifier = Modifier.size(32.dp),
+                    color = SpectrePurple
                 )
             }
+        }
 
-            Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-            Text(
-                text = "Spectre",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = CyberTextPrimary
-            )
+        Text(
+            text = "Spectre",
+            fontWeight = FontWeight.Bold,
+            fontFamily = FontFamily.SansSerif,
+            color = CyberTextPrimary,
+            fontSize = 20.sp
+        )
 
-            Text(
-                text = "v${com.matepazy.spectre.BuildConfig.VERSION_NAME}",
-                fontSize = 11.sp,
-                fontFamily = FontFamily.Monospace,
-                color = CyberTextSecondary
-            )
+        Text(
+            text = "v${com.matepazy.spectre.BuildConfig.VERSION_NAME}",
+            fontSize = 11.sp,
+            fontFamily = FontFamily.Monospace,
+            color = CyberTextSecondary
+        )
 
-            Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-            Text(
-                text = "Spectre was developed to raise deep hardware tracking awareness. Modern ad SDKs operate in secrecy, combining dozens of silent passive side-channels to bypass advertising ID resets entirely.\n\nAll signals exposed by this app are queryable by any basic script on your device.",
-                fontSize = 12.sp,
-                color = CyberTextSecondary,
-                lineHeight = 18.sp,
-                textAlign = TextAlign.Center
-            )
+        Text(
+            text = "Spectre was developed to raise hardware tracking awareness. All signals exposed by this app are queryable by any basic script on your device without root.",
+            fontSize = 12.sp,
+            color = CyberTextSecondary,
+            lineHeight = 16.sp,
+            textAlign = TextAlign.Center
+        )
 
-            Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-            HorizontalDivider(color = CyberBorder, modifier = Modifier.padding(bottom = 12.dp))
+        HorizontalDivider(color = CyberBorder, modifier = Modifier.padding(bottom = 12.dp))
 
-            Text(
-                text = "App Security",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = CyberTextSecondary,
-                modifier = Modifier.align(Alignment.Start)
-            )
+        Text(
+            text = "Security",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = CyberTextSecondary,
+            modifier = Modifier.align(Alignment.Start)
+        )
 
-            Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(CyberDarkBg)
+                .border(1.dp, CyberBorder, RoundedCornerShape(8.dp))
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(CyberDarkBg)
-                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Fingerprint,
+                    contentDescription = null,
+                    tint = SpectrePurple,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = "Biometric Lock",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = CyberTextPrimary
+                    )
+                    Text(
+                        text = "Lock application when closed",
+                        fontSize = 11.sp,
+                        color = CyberTextSecondary
+                    )
+                }
+            }
+            Switch(
+                checked = isBiometricEnabled,
+                onCheckedChange = { checked ->
+                    viewModel.setBiometricLockEnabled(context, checked)
+                },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = SpectrePurple,
+                    uncheckedThumbColor = CyberTextSecondary,
+                    uncheckedTrackColor = CyberBorder,
+                    uncheckedBorderColor = CyberTextSecondary
+                )
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Updates",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = CyberTextSecondary,
+            modifier = Modifier.align(Alignment.Start)
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(CyberDarkBg)
+                .border(1.dp, CyberBorder, RoundedCornerShape(8.dp))
+                .padding(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -2213,7 +2071,7 @@ fun AboutView(
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Fingerprint,
+                        imageVector = Icons.Default.CloudDownload,
                         contentDescription = null,
                         tint = SpectrePurple,
                         modifier = Modifier.size(24.dp)
@@ -2221,233 +2079,173 @@ fun AboutView(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = "Biometric Lock",
+                            text = "Auto Check Updates",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = CyberTextPrimary
                         )
                         Text(
-                            text = "Lock Spectre when closed",
+                            text = "Check version status on startup",
                             fontSize = 11.sp,
                             color = CyberTextSecondary
                         )
                     }
                 }
                 Switch(
-                    checked = isBiometricEnabled,
+                    checked = versionCheckEnabled == true,
                     onCheckedChange = { checked ->
-                        viewModel.setBiometricLockEnabled(context, checked)
+                        viewModel.setVersionCheckEnabled(context, checked)
                     },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.White,
-                        checkedTrackColor = SpectrePurple
+                        checkedTrackColor = SpectrePurple,
+                        uncheckedThumbColor = CyberTextSecondary,
+                        uncheckedTrackColor = CyberBorder,
+                        uncheckedBorderColor = CyberTextSecondary
                     )
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "Updates & Version Check",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = CyberTextSecondary,
-                modifier = Modifier.align(Alignment.Start)
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(CyberDarkBg)
-                    .padding(12.dp)
-            ) {
-                // Row 1: Auto Version Checking Toggle
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CloudDownload,
-                            contentDescription = null,
-                            tint = CyberBlue,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "Auto Check Updates",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = CyberTextPrimary
-                            )
-                            Text(
-                                text = "Fetch updates from GitHub API",
-                                fontSize = 11.sp,
-                                color = CyberTextSecondary
-                            )
-                        }
-                    }
-                    Switch(
-                        checked = versionCheckEnabled == true,
-                        onCheckedChange = { checked ->
-                            viewModel.setVersionCheckEnabled(context, checked)
-                        },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = CyberBlue
-                        )
-                    )
-                }
-
-                HorizontalDivider(color = CyberBorder.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 12.dp))
-
-                // Row 2: Update Channel Select (Release vs Pre-release)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.SettingsSuggest,
-                            contentDescription = null,
-                            tint = CyberOrange,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "Update Channel",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = CyberTextPrimary
-                            )
-                            Text(
-                                text = "Choose release track",
-                                fontSize = 11.sp,
-                                color = CyberTextSecondary
-                            )
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(100))
-                            .background(CyberBorder.copy(alpha = 0.3f))
-                            .padding(2.dp)
-                    ) {
-                        val channels = listOf("release", "pre-release")
-                        channels.forEach { ch ->
-                            val isSel = updateChannel == ch
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(100))
-                                    .background(if (isSel) SpectrePurple else Color.Transparent)
-                                    .clickable { viewModel.setUpdateChannel(context, ch) }
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = if (ch == "release") "Stable" else "Beta",
-                                    color = if (isSel) Color.White else CyberTextSecondary,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
-                }
-
-                HorizontalDivider(color = CyberBorder.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 12.dp))
-
-                // Row 3: Manual Check for Updates
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Sync,
-                            contentDescription = null,
-                            tint = CyberGreen,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "Manual Check",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = CyberTextPrimary
-                            )
-                            val statusText = when (updateState) {
-                                is UpdateState.Checking -> "Checking..."
-                                is UpdateState.UpdateAvailable -> "Update available!"
-                                is UpdateState.Downloading -> "Downloading..."
-                                is UpdateState.Completed -> "Ready to install"
-                                is UpdateState.Error -> "Check failed"
-                                else -> "Up to date"
-                            }
-                            Text(
-                                text = "Status: $statusText",
-                                fontSize = 11.sp,
-                                color = CyberTextSecondary
-                            )
-                        }
-                    }
-
-                    Button(
-                        onClick = { viewModel.triggerVersionCheck(context, manual = true) },
-                        colors = ButtonDefaults.buttonColors(containerColor = CyberGreen),
-                        modifier = Modifier.height(32.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp)
-                    ) {
-                        Text("Check", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            HorizontalDivider(color = CyberBorder, modifier = Modifier.padding(bottom = 12.dp))
+            HorizontalDivider(color = CyberBorder.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 12.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedButton(
-                    onClick = onResetOnboarding,
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = CyberRed),
-                    border = BorderStroke(1.5.dp, CyberRed.copy(alpha = 0.5f)),
-                    modifier = Modifier.height(38.dp),
-                    shape = RoundedCornerShape(100)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Text("Re-Onboard", fontSize = 11.sp)
+                    Icon(
+                        imageVector = Icons.Default.SettingsSuggest,
+                        contentDescription = null,
+                        tint = SpectrePurple,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Update Channel",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = CyberTextPrimary
+                        )
+                        Text(
+                            text = "Choose stable vs beta releases",
+                            fontSize = 11.sp,
+                            color = CyberTextSecondary
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(100))
+                        .background(CyberBorder)
+                        .padding(2.dp)
+                ) {
+                    val channels = listOf("release", "pre-release")
+                    channels.forEach { ch ->
+                        val isSel = updateChannel == ch
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(100))
+                                .background(if (isSel) SpectrePurple else Color.Transparent)
+                                .clickable { viewModel.setUpdateChannel(context, ch) }
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = if (ch == "release") "Stable" else "Beta",
+                                color = if (isSel) Color.White else CyberTextSecondary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+
+            HorizontalDivider(color = CyberBorder.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Sync,
+                        contentDescription = null,
+                        tint = SpectrePurple,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Manual Check",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = CyberTextPrimary
+                        )
+                        val statusText = when (updateState) {
+                            is UpdateState.Checking -> "Checking..."
+                            is UpdateState.UpdateAvailable -> "Update available!"
+                            is UpdateState.Downloading -> "Downloading..."
+                            is UpdateState.Completed -> "Ready to install"
+                            is UpdateState.Error -> "Check failed"
+                            else -> "Up to date"
+                        }
+                        Text(
+                            text = "Status: $statusText",
+                            fontSize = 11.sp,
+                            color = CyberTextSecondary
+                        )
+                    }
                 }
 
                 Button(
-                    onClick = onDismiss,
+                    onClick = { viewModel.triggerVersionCheck(context, manual = true) },
                     colors = ButtonDefaults.buttonColors(containerColor = SpectrePurple),
-                    modifier = Modifier.height(38.dp),
-                    shape = RoundedCornerShape(100)
+                    modifier = Modifier.height(32.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp)
                 ) {
-                    Text("Got It", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("Check", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(
+                onClick = onResetOnboarding,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = CyberRed),
+                border = BorderStroke(1.dp, CyberRed.copy(alpha = 0.3f)),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(44.dp),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("Reset App", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
+
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(containerColor = SpectrePurple),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(44.dp),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("Done", color = Color.White, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -2467,274 +2265,264 @@ fun DetailedRegistryView(
         SignalCategory.ADVANCED -> CyberOrange
     }
 
-    Card(
+    Column(
         modifier = Modifier
-            .fillMaxWidth(0.96f)
-            .padding(vertical = 24.dp)
-            .wrapContentHeight(),
-        colors = CardDefaults.cardColors(containerColor = CyberCardBg),
-        border = BorderStroke(1.5.dp, categoryColor.copy(alpha = 0.6f)),
-        shape = RoundedCornerShape(24.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 24.dp)
+            .padding(bottom = 24.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Drag Handle Indicator
+            val signalIcon = remember(signal.id) { getSignalIcon(signal.id) }
             Box(
                 modifier = Modifier
-                    .width(40.dp)
-                    .height(4.dp)
+                    .size(36.dp)
                     .clip(CircleShape)
-                    .background(CyberBorder)
-                    .align(Alignment.CenterHorizontally)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Header Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                    .background(categoryColor.copy(alpha = 0.08f)),
+                contentAlignment = Alignment.Center
             ) {
-                val signalIcon = remember(signal.id) { getSignalIcon(signal.id) }
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(categoryColor.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = signalIcon,
-                        contentDescription = null,
-                        tint = categoryColor,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                Icon(
+                    imageVector = signalIcon,
+                    contentDescription = null,
+                    tint = categoryColor,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
 
-                Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = signal.name,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = CyberTextPrimary
-                    )
-                    Text(
-                        text = signal.category.title + " Signal",
-                        fontSize = 11.sp,
-                        color = categoryColor,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = signal.name,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = CyberTextPrimary
+                )
+                Text(
+                    text = signal.category.title + " Signal",
+                    fontSize = 11.sp,
+                    color = categoryColor,
+                    fontWeight = FontWeight.Bold
+                )
+            }
 
-                // Copy All Button
-                IconButton(
-                    onClick = {
-                        val fullReport = StringBuilder()
-                        fullReport.append("Signal: ${signal.name}\n")
-                        fullReport.append("Category: ${signal.category.title}\n")
-                        fullReport.append("Raw Value Summary: ${signal.rawValue}\n\n")
-                        signal.detailedData?.forEach { group ->
-                            fullReport.append("--- ${group.categoryName ?: "Registry"} ---\n")
-                            group.items.forEach { item ->
-                                fullReport.append("${item.label}: ${item.value}")
-                                if (item.description != null) {
-                                    fullReport.append(" (${item.description})")
-                                }
-                                fullReport.append("\n")
+            IconButton(
+                onClick = {
+                    val fullReport = StringBuilder()
+                    fullReport.append("Signal: ${signal.name}\n")
+                    fullReport.append("Category: ${signal.category.title}\n")
+                    fullReport.append("Raw Value Summary: ${signal.rawValue}\n\n")
+                    signal.detailedData?.forEach { group ->
+                        fullReport.append("--- ${group.categoryName ?: "Registry"} ---\n")
+                        group.items.forEach { item ->
+                            fullReport.append("${item.label}: ${item.value}")
+                            if (item.description != null) {
+                                  fullReport.append(" (${item.description})")
                             }
                             fullReport.append("\n")
                         }
-                        clipboard.setText(AnnotatedString(fullReport.toString()))
-                        Toast.makeText(context, "Copied entire registry to clipboard!", Toast.LENGTH_SHORT).show()
+                        fullReport.append("\n")
                     }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ContentCopy,
-                        contentDescription = "Copy All Data",
-                        tint = CyberTextSecondary,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    clipboard.setText(AnnotatedString(fullReport.toString()))
+                    Toast.makeText(context, "Copied all data to clipboard!", Toast.LENGTH_SHORT).show()
                 }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Scrollable Registry Content
-            Box(
-                modifier = Modifier
-                    .weight(1f, fill = false)
-                    .heightIn(max = 450.dp)
             ) {
-                val scrollState = rememberScrollState()
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(scrollState)
-                ) {
-                    val detailedDataList = signal.detailedData
-                    if (detailedDataList.isNullOrEmpty()) {
-                        // Fallback: If no detailedData, show a structured card for the rawValue
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = CyberBorder.copy(alpha = 0.2f)),
-                            border = BorderStroke(1.dp, CyberBorder),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = "Copy All Data",
+                    tint = CyberTextSecondary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Implications",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = CyberBlue
+        )
+        
+        Spacer(modifier = Modifier.height(4.dp))
+        
+        Text(
+            text = getTrackingRiskExplanation(signal),
+            fontSize = 12.sp,
+            color = CyberTextSecondary,
+            lineHeight = 18.sp
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Box(
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .heightIn(max = 400.dp)
+        ) {
+            val scrollState = rememberScrollState()
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState)
+            ) {
+                val detailedDataList = signal.detailedData
+                if (detailedDataList.isNullOrEmpty()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = CyberBorder.copy(alpha = 0.2f)),
+                        border = BorderStroke(1.dp, CyberBorder),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Text(
+                                text = "Raw Value",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = CyberTextSecondary
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.Top,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
                                 Text(
-                                    text = "Raw Value",
+                                    text = signal.rawValue,
                                     fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = CyberTextSecondary
+                                    fontFamily = FontFamily.Monospace,
+                                    color = CyberTextPrimary,
+                                    modifier = Modifier.weight(1f)
                                 )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.Top,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                Spacer(modifier = Modifier.width(12.dp))
+                                IconButton(
+                                    onClick = {
+                                        clipboard.setText(AnnotatedString(signal.rawValue))
+                                        Toast.makeText(context, "Copied value!", Toast.LENGTH_SHORT).show()
+                                    },
+                                    modifier = Modifier.size(24.dp)
                                 ) {
-                                    Text(
-                                        text = signal.rawValue,
-                                        fontSize = 12.sp,
-                                        fontFamily = FontFamily.Monospace,
-                                        color = CyberTextPrimary,
-                                        modifier = Modifier.weight(1f)
+                                    Icon(
+                                        imageVector = Icons.Default.ContentCopy,
+                                        contentDescription = "Copy",
+                                        tint = CyberTextSecondary,
+                                        modifier = Modifier.size(16.dp)
                                     )
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    detailedDataList.forEachIndexed { groupIdx, group ->
+                        if (groupIdx > 0) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                        
+                        Text(
+                            text = group.categoryName ?: "",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = CyberBlue,
+                            modifier = Modifier.padding(bottom = 6.dp)
+                        )
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(CyberBorder.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                                .border(1.dp, CyberBorder, RoundedCornerShape(12.dp))
+                                .padding(vertical = 4.dp)
+                        ) {
+                            group.items.forEachIndexed { idx, item ->
+                                if (idx > 0) {
+                                    HorizontalDivider(color = CyberBorder.copy(alpha = 0.5f), thickness = 0.5.dp)
+                                }
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    val itemIcon = getDetailItemIcon(item.iconName ?: "info")
+                                    Icon(
+                                        imageVector = itemIcon,
+                                        contentDescription = null,
+                                        tint = categoryColor,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+
                                     Spacer(modifier = Modifier.width(12.dp))
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = item.label,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = CyberTextPrimary
+                                        )
+                                        if (item.description != null) {
+                                            Text(
+                                                text = item.description!!,
+                                                fontSize = 11.sp,
+                                                color = CyberTextSecondary,
+                                                lineHeight = 14.sp
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = item.value,
+                                            fontSize = 12.sp,
+                                            fontFamily = FontFamily.Monospace,
+                                            color = CyberTextPrimary,
+                                            lineHeight = 16.sp
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.width(8.dp))
+
                                     IconButton(
                                         onClick = {
-                                            clipboard.setText(AnnotatedString(signal.rawValue))
-                                            Toast.makeText(context, "Copied value!", Toast.LENGTH_SHORT).show()
+                                            clipboard.setText(AnnotatedString("${item.label}: ${item.value}"))
+                                            Toast.makeText(context, "Copied details!", Toast.LENGTH_SHORT).show()
                                         },
-                                        modifier = Modifier.size(24.dp)
+                                        modifier = Modifier.size(28.dp)
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.ContentCopy,
-                                            contentDescription = "Copy",
+                                            contentDescription = "Copy Row",
                                             tint = CyberTextSecondary,
-                                            modifier = Modifier.size(16.dp)
+                                            modifier = Modifier.size(14.dp)
                                         )
                                     }
                                 }
                             }
                         }
-                    } else {
-                        // Display Groups
-                        detailedDataList.forEachIndexed { groupIdx, group ->
-                            if (groupIdx > 0) {
-                                Spacer(modifier = Modifier.height(16.dp))
-                            }
-                            
-                            Text(
-                                text = group.categoryName ?: "",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = CyberBlue,
-                                modifier = Modifier.padding(bottom = 6.dp)
-                            )
-
-                            // Display Table/Grid Layout for items
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(containerColor = CyberBorder.copy(alpha = 0.2f)),
-                                border = BorderStroke(1.dp, CyberBorder),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Column {
-                                    group.items.forEachIndexed { idx, item ->
-                                        if (idx > 0) {
-                                            HorizontalDivider(color = CyberBorder, thickness = 0.5.dp)
-                                        }
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            // Item Icon
-                                            val itemIcon = getDetailItemIcon(item.iconName ?: "info")
-                                            Icon(
-                                                imageVector = itemIcon,
-                                                contentDescription = null,
-                                                tint = categoryColor.copy(alpha = 0.8f),
-                                                modifier = Modifier.size(18.dp)
-                                            )
-
-                                            Spacer(modifier = Modifier.width(10.dp))
-
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(
-                                                    text = item.label,
-                                                    fontSize = 12.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = CyberTextPrimary
-                                                )
-                                                if (item.description != null) {
-                                                    Text(
-                                                        text = item.description!!,
-                                                        fontSize = 10.sp,
-                                                        color = CyberTextSecondary,
-                                                        lineHeight = 12.sp
-                                                    )
-                                                }
-                                                Spacer(modifier = Modifier.height(2.dp))
-                                                Text(
-                                                    text = item.value,
-                                                    fontSize = 11.sp,
-                                                    fontFamily = FontFamily.Monospace,
-                                                    color = CyberTextPrimary,
-                                                    lineHeight = 14.sp
-                                                )
-                                            }
-
-                                            Spacer(modifier = Modifier.width(8.dp))
-
-                                            // Individual Row Copy Button
-                                            IconButton(
-                                                onClick = {
-                                                    clipboard.setText(AnnotatedString("${item.label}: ${item.value}"))
-                                                    Toast.makeText(context, "Copied row detail!", Toast.LENGTH_SHORT).show()
-                                                },
-                                                modifier = Modifier.size(28.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.ContentCopy,
-                                                    contentDescription = "Copy Row",
-                                                    tint = CyberTextSecondary,
-                                                    modifier = Modifier.size(14.dp)
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
             }
+        }
 
-            Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-            // Action/Close button
-            Button(
-                onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(containerColor = categoryColor),
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(100)
-            ) {
-                Text(
-                    text = "Close Registry",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
-                )
-            }
+        Button(
+            onClick = onDismiss,
+            colors = ButtonDefaults.buttonColors(containerColor = categoryColor),
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            contentPadding = PaddingValues(vertical = 12.dp)
+        ) {
+            Text(
+                text = "Close Registry",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp
+            )
         }
     }
 }
@@ -2880,8 +2668,9 @@ fun UpdateBannerCard(version: String, onClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UpdateDetailsDialog(
+fun UpdateDetailsSheet(
     version: String,
     notes: String,
     downloadUrl: String,
@@ -2904,26 +2693,44 @@ fun UpdateDetailsDialog(
         }
     }
 
-    AlertDialog(
-        onDismissRequest = { 
+    ModalBottomSheet(
+        onDismissRequest = {
             if (updateState !is UpdateState.Downloading) {
                 onDismiss()
             }
         },
-        title = {
-            Text(
-                text = "Update to $version",
-                fontWeight = FontWeight.Bold,
-                color = CyberTextPrimary,
-                fontSize = 18.sp
-            )
-        },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .wrapContentHeight()
-            ) {
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = CyberCardBg,
+        scrimColor = Color.Black.copy(alpha = 0.4f),
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 24.dp)
+        ) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.NewReleases,
+                    contentDescription = null,
+                    tint = CyberOrange,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Update to $version",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = CyberTextPrimary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Box(modifier = Modifier.fillMaxWidth()) {
                 when (updateState) {
                     is UpdateState.Downloading -> {
                         val progress = (updateState as UpdateState.Downloading).progress
@@ -2957,7 +2764,6 @@ fun UpdateDetailsDialog(
                         }
                     }
                     is UpdateState.Completed -> {
-                        val apkFile = (updateState as UpdateState.Completed).apkFile
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.fillMaxWidth()
@@ -3042,60 +2848,81 @@ fun UpdateDetailsDialog(
                     }
                 }
             }
-        },
-        confirmButton = {
-            when (updateState) {
-                is UpdateState.Downloading -> {}
-                is UpdateState.Completed -> {
-                    val file = (updateState as UpdateState.Completed).apkFile
-                    Button(
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (updateState !is UpdateState.Downloading) {
+                    OutlinedButton(
                         onClick = {
-                            if (viewModel.canInstallPackages(context)) {
-                                viewModel.installApk(context, file)
-                            } else {
-                                showPermissionExplanation = true
-                            }
+                            viewModel.resetUpdateState()
+                            onDismiss()
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = CyberGreen)
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = CyberTextPrimary),
+                        border = BorderStroke(1.dp, CyberBorder),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
+                        shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text("Install", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("Close", fontWeight = FontWeight.Bold)
                     }
                 }
-                is UpdateState.Error -> {
-                    Button(
-                        onClick = { viewModel.resetUpdateState() },
-                        colors = ButtonDefaults.buttonColors(containerColor = SpectrePurple)
-                    ) {
-                        Text("Retry", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-                }
-                else -> {
-                    Button(
-                        onClick = { viewModel.startApkDownload(context, downloadUrl) },
-                        colors = ButtonDefaults.buttonColors(containerColor = CyberOrange)
-                    ) {
-                        Text("Download & Install", color = Color.White, fontWeight = FontWeight.Bold)
+
+                val showAction = updateState !is UpdateState.Downloading
+                if (showAction) {
+                    when (updateState) {
+                        is UpdateState.Completed -> {
+                            val file = (updateState as UpdateState.Completed).apkFile
+                            Button(
+                                onClick = {
+                                    if (viewModel.canInstallPackages(context)) {
+                                        viewModel.installApk(context, file)
+                                    } else {
+                                        showPermissionExplanation = true
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = CyberGreen),
+                                modifier = Modifier
+                                    .weight(1.2f)
+                                    .height(44.dp),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Install", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        is UpdateState.Error -> {
+                            Button(
+                                onClick = { viewModel.resetUpdateState() },
+                                colors = ButtonDefaults.buttonColors(containerColor = SpectrePurple),
+                                modifier = Modifier
+                                    .weight(1.2f)
+                                    .height(44.dp),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Retry", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        else -> {
+                            Button(
+                                onClick = { viewModel.startApkDownload(context, downloadUrl) },
+                                colors = ButtonDefaults.buttonColors(containerColor = CyberOrange),
+                                modifier = Modifier
+                                    .weight(1.2f)
+                                    .height(44.dp),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Download & Install", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
                 }
             }
-        },
-        dismissButton = {
-            if (updateState !is UpdateState.Downloading) {
-                OutlinedButton(
-                    onClick = {
-                        viewModel.resetUpdateState()
-                        onDismiss()
-                    },
-                    border = BorderStroke(1.dp, CyberBorder)
-                ) {
-                    Text("Close", color = CyberTextPrimary)
-                }
-            }
-        },
-        containerColor = CyberCardBg,
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.border(1.dp, CyberBorder, RoundedCornerShape(16.dp))
-    )
+        }
+    }
 
     if (showPermissionExplanation) {
         AlertDialog(
