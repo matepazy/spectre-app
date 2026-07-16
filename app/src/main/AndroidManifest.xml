@@ -29,6 +29,44 @@
     <uses-feature android:name="android.hardware.sensor.stepcounter" android:required="false" />
 
     <queries>
+        <package android:name="com.whatsapp" />
+        <package android:name="org.telegram.messenger" />
+        <package android:name="com.twitter.android" />
+        <package android:name="com.facebook.katana" />
+        <package android:name="com.instagram.android" />
+        <package android:name="com.google.android.youtube" />
+        <package android:name="com.netflix.mediaclient" />
+        <package android:name="com.spotify.music" />
+        <package android:name="com.zhiliaoapp.musically" />
+        <package android:name="com.paypal.android.p2pmobile" />
+        <package android:name="com.snapchat.android" />
+        <package android:name="com.reddit.frontpage" />
+        <package android:name="com.linkedin.android" />
+        <package android:name="com.pinterest" />
+        <package android:name="com.discord" />
+        <package android:name="com.slack" />
+        <package android:name="org.thoughtcrime.securesms" />
+        <package android:name="com.microsoft.teams" />
+        <package android:name="com.skype.raider" />
+        <package android:name="us.zoom.videomeetings" />
+        <package android:name="com.instagram.barcelona" />
+        <package android:name="org.joinmastodon.android" />
+        <package android:name="com.google.android.apps.maps" />
+        <package android:name="com.waze" />
+        <package android:name="com.ubercab" />
+        <package android:name="com.airbnb.android" />
+        <package android:name="com.amazon.mShop.android.shopping" />
+        <package android:name="com.ebay.mobile" />
+        <package android:name="com.revolut.revolut" />
+        <package android:name="co.transferwise.transferwise" />
+        <package android:name="com.duolingo" />
+        <package android:name="com.valvesoftware.android.steam.community" />
+        <package android:name="tv.twitch.android.app" />
+        <package android:name="com.wolt.android" />
+        <package android:name="com.mcdonalds.mobileapp" />
+        <package android:name="com.google.android.apps.docs" />
+        <package android:name="com.google.android.gm" />
+
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="whatsapp" />
@@ -129,6 +167,151 @@
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="mastodon" />
         </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="ebay" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="revolut" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="wise" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="duolingo" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="steam" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="twitch" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="wolt" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="mcdonalds" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="mcdmobileapp" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="googledrive" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="googlegmail" />
+        </intent>
+
+        <!-- Hungarian Apps -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="simplepay" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="simplemobilepayment" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="simplebusiness" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="dap" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="dapapp" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="otpbank" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="georgehu" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="khmobilbank" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="mbhbank" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="bkkfutar" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="budapestgo" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="mavapp" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="mavplusz" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="eesztlakossagi" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="egeszsegablak" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="telekomhu" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="yettelhu" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="vodafonehu" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="foodorahu" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="netpincer" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="nemzetimobilfizetes" />
+        </intent>
+
+        <package android:name="com.otpmobil.simple" />
+        <package android:name="hu.gov.dap.app" />
+        <package android:name="hu.otpbank.mobile" />
+        <package android:name="hu.erste.android.postb" />
+        <package android:name="hu.khb.mobilbank" />
+        <package android:name="hu.mbhbank.retailapp" />
+        <package android:name="hu.bkk.futar" />
+        <package android:name="hu.mavstart.belfoldi.utazas" />
+        <package android:name="hu.eeszt.lakossagi" />
+        <package android:name="hu.telekom.telekomapp" />
+        <package android:name="com.telenor.mytelenor" />
+        <package android:name="hu.vodafone.apps.myvodafone" />
+        <package android:name="hu.netpincer.netpincer" />
+        <package android:name="hu.nemzetimobilfizetes.app" />
     </queries>
 
     <application

@@ -3,6 +3,7 @@ package com.matepazy.spectre
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.content.pm.PackageInfo
 import android.content.pm.ResolveInfo
 import androidx.test.core.app.ApplicationProvider
 import com.matepazy.spectre.provider.InstalledAppsProvider
@@ -21,7 +22,7 @@ import org.robolectric.annotation.Config
 class InstalledAppsProviderTest {
 
     @Test
-    fun testSocialPresenceMapping() = runBlocking {
+    fun testPresenceMapping() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val pm = context.packageManager
         val shadowPm = Shadows.shadowOf(pm)
@@ -46,14 +47,30 @@ class InstalledAppsProviderTest {
         }
         shadowPm.addResolveInfoForIntent(signalIntent, signalResolve)
 
+        // Mock SimplePay presence via deep link
+        val simplepayIntent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("simplepay://"))
+        val simplepayResolve = ResolveInfo().apply {
+            activityInfo = ActivityInfo().apply {
+                packageName = "com.otpmobil.simple"
+                name = "SimplePayActivity"
+            }
+        }
+        shadowPm.addResolveInfoForIntent(simplepayIntent, simplepayResolve)
+
+        // Mock DÁP presence via Package Name Query fallback
+        val dapPackage = PackageInfo().apply {
+            packageName = "hu.gov.dap.app"
+        }
+        shadowPm.installPackage(dapPackage)
+
         val provider = InstalledAppsProvider()
         val signals = provider.provideSignals(context)
 
         val sidechannelSignal = signals.find { it.id == "installed_apps_sidechannel" }
         assertNotNull("Sidechannel signal should not be null", sidechannelSignal)
         assertTrue(
-            "Sidechannel should detect 2 platforms, raw value: ${sidechannelSignal!!.rawValue}",
-            sidechannelSignal.rawValue.contains("2 platforms")
+            "Sidechannel should detect 4 platforms, raw value: ${sidechannelSignal!!.rawValue}",
+            sidechannelSignal.rawValue.contains("4 platforms")
         )
 
         val detailedData = sidechannelSignal.detailedData
@@ -67,6 +84,14 @@ class InstalledAppsProviderTest {
         val signalItem = items.find { it.label == "Signal" }
         assertNotNull("Signal should be in detailed items", signalItem)
         assertEquals("Active Footprint Detected", signalItem!!.value)
+
+        val simplepayItem = items.find { it.label == "SimplePay" }
+        assertNotNull("SimplePay should be in detailed items", simplepayItem)
+        assertEquals("Active Footprint Detected", simplepayItem!!.value)
+
+        val dapItem = items.find { it.label == "DÁP (Digitális Állampolgár)" }
+        assertNotNull("DÁP should be in detailed items", dapItem)
+        assertEquals("Active Footprint Detected", dapItem!!.value)
 
         val snapchatItem = items.find { it.label == "Snapchat" }
         assertNotNull("Snapchat should be in detailed items", snapchatItem)

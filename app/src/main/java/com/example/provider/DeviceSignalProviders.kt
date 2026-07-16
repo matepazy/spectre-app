@@ -265,7 +265,8 @@ class InstalledAppsProvider : SignalProvider() {
     override val id = "installed_apps"
     override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val signals = mutableListOf<FingerprintSignal>()
-        val socialSchemes = mapOf(
+        val presenceSchemes = mapOf(
+            // Social Media & Messaging
             "WhatsApp" to listOf("whatsapp://send", "whatsapp://"),
             "Telegram" to listOf("tg://resolve", "tg://"),
             "X / Twitter" to listOf("twitter://timeline", "twitter://"),
@@ -287,14 +288,101 @@ class InstalledAppsProvider : SignalProvider() {
             "Skype" to listOf("skype://"),
             "Zoom" to listOf("zoomus://"),
             "Threads" to listOf("barcelona://"),
-            "Mastodon" to listOf("mastodon://")
+            "Mastodon" to listOf("mastodon://"),
+            
+            // International Utilities, Travel, Shopping
+            "Google Maps" to listOf("geo://", "google.navigation://"),
+            "Waze" to listOf("waze://"),
+            "Uber" to listOf("uber://"),
+            "Airbnb" to listOf("airbnb://"),
+            "Amazon" to listOf("amazon://"),
+            "Ebay" to listOf("ebay://"),
+            "Revolut" to listOf("revolut://"),
+            "Wise" to listOf("wise://"),
+            "Duolingo" to listOf("duolingo://"),
+            "Steam" to listOf("steam://"),
+            "Twitch" to listOf("twitch://"),
+            "Wolt" to listOf("wolt://"),
+            "McDonald's" to listOf("mcdonalds://", "mcdmobileapp://"),
+            "Google Drive" to listOf("googledrive://"),
+            "Gmail" to listOf("googlegmail://"),
+
+            // Hungarian Apps (at the bottom)
+            "SimplePay" to listOf("simplepay://", "simplemobilepayment://", "simplebusiness://"),
+            "DÁP (Digitális Állampolgár)" to listOf("dap://", "dapapp://"),
+            "OTP MobilBank" to listOf("otpbank://"),
+            "Erste George HU" to listOf("georgehu://"),
+            "K&H Mobilbank" to listOf("khmobilbank://"),
+            "MBH Bank App" to listOf("mbhbank://"),
+            "BudapestGO" to listOf("bkkfutar://", "budapestgo://"),
+            "MÁV (MÁVPlusz)" to listOf("mavapp://", "mavplusz://"),
+            "EgészségAblak" to listOf("eesztlakossagi://", "egeszsegablak://"),
+            "Telekom HU" to listOf("telekomhu://"),
+            "Yettel HU" to listOf("yettelhu://"),
+            "Vodafone HU" to listOf("vodafonehu://"),
+            "Foodora HU" to listOf("foodorahu://", "netpincer://"),
+            "Nemzeti Mobilfizetés" to listOf("nemzetimobilfizetes://")
+        )
+        
+        val appPackages = mapOf(
+            "WhatsApp" to "com.whatsapp",
+            "Telegram" to "org.telegram.messenger",
+            "X / Twitter" to "com.twitter.android",
+            "Facebook" to "com.facebook.katana",
+            "Instagram" to "com.instagram.android",
+            "YouTube" to "com.google.android.youtube",
+            "Netflix" to "com.netflix.mediaclient",
+            "Spotify" to "com.spotify.music",
+            "TikTok" to "com.zhiliaoapp.musically",
+            "PayPal" to "com.paypal.android.p2pmobile",
+            "Snapchat" to "com.snapchat.android",
+            "Reddit" to "com.reddit.frontpage",
+            "LinkedIn" to "com.linkedin.android",
+            "Pinterest" to "com.pinterest",
+            "Discord" to "com.discord",
+            "Slack" to "com.slack",
+            "Signal" to "org.thoughtcrime.securesms",
+            "Microsoft Teams" to "com.microsoft.teams",
+            "Skype" to "com.skype.raider",
+            "Zoom" to "us.zoom.videomeetings",
+            "Threads" to "com.instagram.barcelona",
+            "Mastodon" to "org.joinmastodon.android",
+            "Google Maps" to "com.google.android.apps.maps",
+            "Waze" to "com.waze",
+            "Uber" to "com.ubercab",
+            "Airbnb" to "com.airbnb.android",
+            "Amazon" to "com.amazon.mShop.android.shopping",
+            "Ebay" to "com.ebay.mobile",
+            "Revolut" to "com.revolut.revolut",
+            "Wise" to "co.transferwise.transferwise",
+            "Duolingo" to "com.duolingo",
+            "Steam" to "com.valvesoftware.android.steam.community",
+            "Twitch" to "tv.twitch.android.app",
+            "Wolt" to "com.wolt.android",
+            "McDonald's" to "com.mcdonalds.mobileapp",
+            "Google Drive" to "com.google.android.apps.docs",
+            "Gmail" to "com.google.android.gm",
+            "SimplePay" to "com.otpmobil.simple",
+            "DÁP (Digitális Állampolgár)" to "hu.gov.dap.app",
+            "OTP MobilBank" to "hu.otpbank.mobile",
+            "Erste George HU" to "hu.erste.android.postb",
+            "K&H Mobilbank" to "hu.khb.mobilbank",
+            "MBH Bank App" to "hu.mbhbank.retailapp",
+            "BudapestGO" to "hu.bkk.futar",
+            "MÁV (MÁVPlusz)" to "hu.mavstart.belfoldi.utazas",
+            "EgészségAblak" to "hu.eeszt.lakossagi",
+            "Telekom HU" to "hu.telekom.telekomapp",
+            "Yettel HU" to "com.telenor.mytelenor",
+            "Vodafone HU" to "hu.vodafone.apps.myvodafone",
+            "Foodora HU" to "hu.netpincer.netpincer",
+            "Nemzeti Mobilfizetés" to "hu.nemzetimobilfizetes.app"
         )
         
         val discoveredApps = mutableListOf<String>()
         val pm = context.packageManager
         val detailedItems = mutableListOf<DetailedItem>()
         
-        for ((appName, schemes) in socialSchemes) {
+        for ((appName, schemes) in presenceSchemes) {
             try {
                 var isInstalled = false
                 var matchedScheme = schemes.firstOrNull() ?: ""
@@ -307,6 +395,20 @@ class InstalledAppsProvider : SignalProvider() {
                         break
                     }
                 }
+                
+                if (!isInstalled) {
+                    val pkgName = appPackages[appName]
+                    if (pkgName != null) {
+                        try {
+                            pm.getPackageInfo(pkgName, 0)
+                            isInstalled = true
+                            matchedScheme = "Package Name Query: $pkgName"
+                        } catch (e: Exception) {
+                            // Package not installed
+                        }
+                    }
+                }
+                
                 if (isInstalled) {
                     discoveredApps.add(appName)
                 }
@@ -330,11 +432,11 @@ class InstalledAppsProvider : SignalProvider() {
         signals.add(
             FingerprintSignal(
                 id = "installed_apps_sidechannel",
-                name = "Social Presence Mapping (Side-channel)",
-                description = "Queries standard intent-filters/URL schemes to discover social app installations without needing list-packages permission.",
+                name = "Application Presence Mapping (Side-channel)",
+                description = "Queries standard intent-filters/URL schemes and target packages to discover app installations without needing list-packages permission.",
                 category = SignalCategory.ADVANCED,
                 rawValue = valueString,
-                narrative = "By probing deep-link URI schemes, any passive tracker can reconstruct your social graph profile, determining which platforms you are active on without querying the restricted package manager API.",
+                narrative = "By probing deep-link URI schemes and package visibility channels, passive trackers can map out your app ecosystem, revealing your preferences, banking apps, and government service enrollment without user consent.",
                 threatScore = 8,
                 detailedData = listOf(detailedGroup("Probed URL Schemes Status", detailedItems))
             )

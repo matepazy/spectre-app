@@ -2439,62 +2439,100 @@ fun DetailedRegistryView(
                                 if (idx > 0) {
                                     HorizontalDivider(color = CyberBorder.copy(alpha = 0.5f), thickness = 0.5.dp)
                                 }
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    val itemIcon = getDetailItemIcon(item.iconName ?: "info")
-                                    Icon(
-                                        imageVector = itemIcon,
-                                        contentDescription = null,
-                                        tint = categoryColor,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-
-                                    Spacer(modifier = Modifier.width(12.dp))
-
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = item.label,
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = CyberTextPrimary
-                                        )
-                                        if (item.description != null) {
+                                val isSideChannel = signal.id == "installed_apps_sidechannel"
+                                if (isSideChannel) {
+                                    val isInstalled = item.value.contains("Active")
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            val itemIcon = getDetailItemIcon(item.iconName ?: "info")
+                                            Icon(
+                                                imageVector = itemIcon,
+                                                contentDescription = null,
+                                                tint = categoryColor,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(12.dp))
                                             Text(
-                                                text = item.description!!,
-                                                fontSize = 11.sp,
-                                                color = CyberTextSecondary,
-                                                lineHeight = 14.sp
+                                                text = item.label,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = CyberTextPrimary
                                             )
                                         }
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = item.value,
-                                            fontSize = 12.sp,
-                                            fontFamily = FontFamily.Monospace,
-                                            color = CyberTextPrimary,
-                                            lineHeight = 16.sp
+                                        Icon(
+                                            imageVector = if (isInstalled) Icons.Default.Check else Icons.Default.Close,
+                                            contentDescription = if (isInstalled) "Detected" else "Not Detected",
+                                            tint = if (isInstalled) Color.Green else Color.Red,
+                                            modifier = Modifier.size(18.dp)
                                         )
                                     }
-
-                                    Spacer(modifier = Modifier.width(8.dp))
-
-                                    IconButton(
-                                        onClick = {
-                                            clipboard.setText(AnnotatedString("${item.label}: ${item.value}"))
-                                            Toast.makeText(context, "Copied details!", Toast.LENGTH_SHORT).show()
-                                        },
-                                        modifier = Modifier.size(28.dp)
+                                } else {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
+                                        val itemIcon = getDetailItemIcon(item.iconName ?: "info")
                                         Icon(
-                                            imageVector = Icons.Default.ContentCopy,
-                                            contentDescription = "Copy Row",
-                                            tint = CyberTextSecondary,
-                                            modifier = Modifier.size(14.dp)
+                                            imageVector = itemIcon,
+                                            contentDescription = null,
+                                            tint = categoryColor,
+                                            modifier = Modifier.size(18.dp)
                                         )
+
+                                        Spacer(modifier = Modifier.width(12.dp))
+
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = item.label,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = CyberTextPrimary
+                                            )
+                                            if (item.description != null) {
+                                                Text(
+                                                     text = item.description!!,
+                                                     fontSize = 11.sp,
+                                                     color = CyberTextSecondary,
+                                                     lineHeight = 14.sp
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = item.value,
+                                                fontSize = 12.sp,
+                                                fontFamily = FontFamily.Monospace,
+                                                color = CyberTextPrimary,
+                                                lineHeight = 16.sp
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.width(8.dp))
+
+                                        IconButton(
+                                            onClick = {
+                                                clipboard.setText(AnnotatedString("${item.label}: ${item.value}"))
+                                                Toast.makeText(context, "Copied details!", Toast.LENGTH_SHORT).show()
+                                            },
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.ContentCopy,
+                                                contentDescription = "Copy Row",
+                                                tint = CyberTextSecondary,
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
