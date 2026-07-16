@@ -2357,19 +2357,14 @@ fun DetailedRegistryView(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Box(
+        LazyColumn(
             modifier = Modifier
                 .weight(1f, fill = false)
                 .heightIn(max = 400.dp)
         ) {
-            val scrollState = rememberScrollState()
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(scrollState)
-            ) {
-                val detailedDataList = signal.detailedData
-                if (detailedDataList.isNullOrEmpty()) {
+            val detailedDataList = signal.detailedData
+            if (detailedDataList.isNullOrEmpty()) {
+                item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = CyberBorder.copy(alpha = 0.2f)),
@@ -2414,12 +2409,16 @@ fun DetailedRegistryView(
                             }
                         }
                     }
-                } else {
-                    detailedDataList.forEachIndexed { groupIdx, group ->
-                        if (groupIdx > 0) {
+                }
+            } else {
+                detailedDataList.forEachIndexed { groupIdx, group ->
+                    if (groupIdx > 0) {
+                        item {
                             Spacer(modifier = Modifier.height(16.dp))
                         }
-                        
+                    }
+                    
+                    item {
                         Text(
                             text = group.categoryName ?: "",
                             fontSize = 12.sp,
@@ -2427,7 +2426,9 @@ fun DetailedRegistryView(
                             color = CyberBlue,
                             modifier = Modifier.padding(bottom = 6.dp)
                         )
+                    }
 
+                    item {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -2461,12 +2462,12 @@ fun DetailedRegistryView(
                                                 modifier = Modifier.size(18.dp)
                                             )
                                             Spacer(modifier = Modifier.width(12.dp))
-                                            Text(
-                                                text = item.label,
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Bold,
+                                        Text(
+                                            text = item.label,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
                                                 color = CyberTextPrimary
-                                            )
+                                        )
                                         }
                                         Icon(
                                             imageVector = if (isInstalled) Icons.Default.Check else Icons.Default.Close,
