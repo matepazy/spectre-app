@@ -70,7 +70,6 @@ class SpectreViewModel : ViewModel() {
         CallLogProvider(),
         SmsProvider(),
         AccountsProvider(),
-        BodySensorsProvider(),
         NotificationPermissionProvider(),
         HardwareSensorsProvider(),
         SystemSettingsProvider(),

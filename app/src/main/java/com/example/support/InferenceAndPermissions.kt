@@ -127,7 +127,6 @@ object PermissionCenter {
         android.Manifest.permission.READ_CALL_LOG,
         android.Manifest.permission.READ_SMS,
         android.Manifest.permission.GET_ACCOUNTS,
-        android.Manifest.permission.BODY_SENSORS,
         android.Manifest.permission.POST_NOTIFICATIONS,
         android.Manifest.permission.ACTIVITY_RECOGNITION,
         android.Manifest.permission.ACCESS_WIFI_STATE,
@@ -150,7 +149,6 @@ object PermissionCenter {
             android.Manifest.permission.READ_CALL_LOG -> "Read Private Call Logs"
             android.Manifest.permission.READ_SMS -> "Read Private SMS Messages"
             android.Manifest.permission.GET_ACCOUNTS -> "Get Registered Accounts List"
-            android.Manifest.permission.BODY_SENSORS -> "Access Body Sensors (Heart Rate, etc.)"
             android.Manifest.permission.POST_NOTIFICATIONS -> "Post System Notifications"
             android.Manifest.permission.ACTIVITY_RECOGNITION -> "Track Physical Motion/Steps"
             android.Manifest.permission.ACCESS_WIFI_STATE -> "Read WiFi Network SSID/Details"
@@ -168,6 +166,10 @@ object PermissionCenter {
         }
         if ((permission == "android.permission.BLUETOOTH_CONNECT" || permission == "android.permission.BLUETOOTH_SCAN") && android.os.Build.VERSION.SDK_INT < 31) {
             return true
+        }
+        if (permission == android.Manifest.permission.READ_EXTERNAL_STORAGE && android.os.Build.VERSION.SDK_INT >= 33) {
+            return context.checkSelfPermission("android.permission.READ_MEDIA_IMAGES") == PackageManager.PERMISSION_GRANTED ||
+                   context.checkSelfPermission("android.permission.READ_MEDIA_VIDEO") == PackageManager.PERMISSION_GRANTED
         }
         try {
             return context.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED

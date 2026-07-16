@@ -1288,7 +1288,6 @@ private fun getSignalIcon(id: String): ImageVector {
         id.contains("call_log_exposure") -> Icons.Default.Phone
         id.contains("sms_exposure_status") -> Icons.Default.Email
         id.contains("system_accounts_list") -> Icons.Default.AccountBox
-        id.contains("body_sensors_tracking") -> Icons.Default.Favorite
         id.contains("notification_post_permission") -> Icons.Default.Notifications
         id.contains("hardware_sensors_footprint") -> Icons.Default.Build
         id.contains("system_settings_leak") -> Icons.Default.Settings
@@ -1444,9 +1443,6 @@ private fun getTrackingRiskExplanation(signal: FingerprintSignal): String {
         }
         "system_accounts_list" -> {
             "The accounts list reveals the registered account names (like Google or email accounts) configured on the device."
-        }
-        "body_sensors_tracking" -> {
-            "Body sensor access exposes personal biometric telemetry, such as heart rate, collected by wearable or health devices."
         }
         "notification_post_permission" -> {
             "Notification permissions allow apps to display alerts. Restricting it prevents unwanted background notifications."

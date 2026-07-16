@@ -2065,32 +2065,6 @@ class AccountsProvider : SignalProvider() {
     }
 }
 
-class BodySensorsProvider : SignalProvider() {
-    override val id = "body_sensors"
-    override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
-        val hasPermission = context.checkSelfPermission(android.Manifest.permission.BODY_SENSORS) == PackageManager.PERMISSION_GRANTED
-        val rawValue = if (hasPermission) "Access Granted" else "Permission Blocked"
-        
-        val detailedItems = listOf(
-            detailedItem("Body Sensors Permission", hasPermission.toString(), "Access authorization to heart rate monitors or physical skin touch sensors", "check"),
-            detailedItem("Ambient Peripherals Availability", "Heart Rate Monitor: Absent / Unenrolled\nBody Temperature: Absent\nSkin Conductance: Absent", "Sub-system sensor registry", "sensor")
-        )
-        
-        return listOf(
-            FingerprintSignal(
-                id = "body_sensors_tracking",
-                name = "Physical Body Sensors Access",
-                description = "Retrieves real-time data from heart rate trackers, step sensors, and health peripherals.",
-                category = SignalCategory.NEEDS_PERMISSION,
-                rawValue = rawValue,
-                narrative = "Body sensors track delicate biometrics like heart rate. Malicious entities monetize sleep cycles, physical stress indices, and movement patterns for healthcare profiling.",
-                threatScore = 8,
-                permissionName = android.Manifest.permission.BODY_SENSORS,
-                detailedData = listOf(detailedGroup("Biometric Body Sensors Configuration", detailedItems))
-            )
-        )
-    }
-}
 
 class NotificationPermissionProvider : SignalProvider() {
     override val id = "notifications"
@@ -2874,13 +2848,18 @@ class BluetoothScanProvider : SignalProvider() {
 class ExternalMediaProvider : SignalProvider() {
     override val id = "external_media"
     override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
-        val hasPermission = context.checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        val hasPermission = if (Build.VERSION.SDK_INT >= 33) {
+            context.checkSelfPermission("android.permission.READ_MEDIA_IMAGES") == PackageManager.PERMISSION_GRANTED ||
+            context.checkSelfPermission("android.permission.READ_MEDIA_VIDEO") == PackageManager.PERMISSION_GRANTED
+        } else {
+            context.checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        }
         
         val detailedItems = mutableListOf<DetailedItem>()
         var count = 0
         var rawValue = "Permission Blocked"
         
-        detailedItems.add(detailedItem("READ_EXTERNAL_STORAGE Granted", hasPermission.toString(), "Public local shared files access status", "check"))
+        detailedItems.add(detailedItem("Media Permissions Granted", hasPermission.toString(), "Public media and photo files access status", "check"))
 
         if (hasPermission) {
             try {
