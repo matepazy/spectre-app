@@ -1,84 +1,189 @@
-<p align="left">
-  <img src="icons/logo-bg.svg" alt="Spectre Logo" width="150" />
+﻿<p align="left">
+  <img src="icons/logo-bg.svg" alt="Spectre Logo" width="120" />
 </p>
 
 # Spectre
-**Spectre** is a diagnostic and forensic tool for Android designed to showcase and analyze the vast landscape of device characteristics, identifiers, build parameters, sensor telemetry, and hardware fingerprints that apps can read.
 
-Inspired by the acclaimed iOS application **[Loupe](https://github.com/mysk-research/loupe)**, Spectre exposes how device fingerprints are constructed and evaluates potential privacy leakage across different Android versions.
+[![Platform](https://img.shields.io/badge/platform-Android-3DDC84?logo=android&logoColor=white)](https://developer.android.com)
+[![Min SDK](https://img.shields.io/badge/minSdk-24%20%28Android%207.0%29-informational)](https://developer.android.com/about/versions/nougat)
+[![License](https://img.shields.io/badge/license-GPLv3-blue)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/matepazy/spectre-app?include_prereleases&label=release)](https://github.com/matepazy/spectre-app/releases)
 
----
+**Spectre** is an educational Android app that shows you exactly what your device reveals about itself — to any app, without asking.
 
-## 💡 Origin & Inspiration
-* **iOS Inspiration**: This application is heavily inspired by **Loupe** by Mysk Research. While Loupe demonstrates the richness of device signals available on iOS, **Spectre** translates this concept to the diverse, fragmented ecosystem of Android, highlighting build parameters, system services, and hardware characteristics.
-
----
-
-## 🔍 How the App Works
-
-Spectre extracts hundreds of distinct device characteristics, organizing them into logical, high-visibility categories. It continuously polls or registers listeners to track dynamic signals, providing real-time telemetry.
-
-### 1. Architectural Overview
-The app follows modern Android development practices with a clean **MVVM (Model-View-ViewModel)** architecture:
-* **UI Layer**: Built entirely in **Jetpack Compose** using Material Design 3. Features a dark-themed cybernetic user interface (`SpectreScreens.kt`) with animated charts, responsive search filtering, and categorized signal expandable list items.
-* **State Management**: Orchestrated via a unified state repository and `SpectreViewModel.kt` utilizing Kotlin `StateFlow` and structured coroutines for non-blocking asynchronous hardware checks.
-* **Signal Providers**: Modular collection engines (`DeviceSignalProviders.kt`) interacting with the Android System Services, Hardware Managers, Telephony Registry, and low-level File System.
-* **Inference & Decision Engine**: A lightweight rule-based local heuristics engine (`InferenceAndPermissions.kt`) that analyzes the combination of gathered signals to score the device's overall fingerprint uniqueness, security posture, and custom anomalies.
+It collects over **60 distinct device signals** across hardware, software, network, and sensor layers, then computes a real-time fingerprint score so you can see how identifiable your device actually is.
 
 ---
 
-## 🛠️ Deep Dive: The Signal Categories
+## What it does
 
-The application probes various layers of the operating system:
+Every app you install can silently read a surprising amount of data from your device — before asking for a single permission. Spectre makes that invisible surface visible.
 
-| Category | Icon | Primary Signals Monitored |
+Open it, and within seconds you'll see:
+- Your device's **tracking risk score** and **uniqueness index**, computed locally
+- Which signals are **freely available** to any app, which require **user consent**, and which can be extracted via **side-channels**
+- A **SHA-256 device signature** derived from the combination of your active signals
+- Which specific signals carry the highest **individual threat score**
+- Real-time updates as sensors, battery state, and network conditions change
+
+> Everything is computed **on-device**. No data is sent anywhere.
+
+---
+
+## Signal categories
+
+Spectre organizes its signals into three tiers based on how an app would realistically obtain them:
+
+| Tier | Label | What it means |
 |---|---|---|
-| **System & Build** | `⚙️` | OS Version, SDK API Level, Build Fingerprint, Bootloader, Kernel Version, System Uptime, Local Time/Timezone. |
-| **Hardware & CPU** | `🖥️` | Processor Name, ABI Support, CPU Cores, Thermal Throttling State, Display Resolution, Refresh Rate, HDR support, DRM Capabilities (Widevine levels). |
-| **Storage & Memory**| `💾` | Heap Size, Total/Available RAM, Low Memory State, Internal Storage Capacity, External SD Card Presence, Encrypted Storage support. |
-| **Battery & Power** | `🔋` | Charging Status, Health, Voltage, Battery Temperature, Technology (Li-Ion, Polymer), Battery Level, Power Saver Mode. |
-| **Network & Comms** | `🌐` | Wi-Fi SSID, BSSID, Signal Strength, IPv4/IPv6 Addresses, Network Interfaces, VPN active status, Bluetooth Scan/State. |
-| **Telephony & SIM** | `📱` | Mobile Carrier, SIM State, Network Type (5G/4G/3G), Mobile Country Code (MCC), Mobile Network Code (MNC), Roaming status. |
-| **Environment & Sensors** | `🌡️` | Real-time values from Accelerometer, Gyroscope, Magnetometer, Barometer, Light Sensor, Proximity Sensor. |
-| **Security & Privacy** | `🛡️` | Developer Options status, USB Debugging (ADB) active state, Root (SU) Binary checks, SELinux enforcing state, Safe Mode, Biometric Hardware availability. |
+| 🟢 | **Passive** | Readable instantly by any app — no prompt, no permission, no warning |
+| 🟡 | **Needs Permission** | Gated behind standard Android runtime permissions |
+| 🔴 | **Advanced** | Side-channel queries, package installation footprints, and configuration inference |
+
+### Signals monitored
+
+| Domain | Examples |
+|---|---|
+| **System & Build** | OS version, SDK level, build fingerprint, bootloader string, kernel version, uptime |
+| **Hardware & CPU** | Processor name, ABI list, core count, thermal state, display resolution & refresh rate, HDR & Widevine DRM level |
+| **Memory & Storage** | Heap size, total/available RAM, low-memory state, internal storage, SD card presence, encrypted storage |
+| **Battery & Power** | Charge level, health, voltage, temperature, technology, charging state, power saver mode |
+| **Network & Comms** | Wi-Fi SSID & BSSID, signal strength, IPv4/IPv6, network interfaces, VPN state, Bluetooth scan |
+| **Telephony & SIM** | Carrier name, SIM state, network type (5G/4G/3G/2G), MCC/MNC, roaming state |
+| **Sensors** | Live readings from accelerometer, gyroscope, magnetometer, barometer, light, proximity |
+| **Security** | Developer options, ADB state, root binary check, SELinux mode, safe mode, biometric hardware |
+| **Installed Apps** | Side-channel social graph mapping via package presence (no `QUERY_ALL_PACKAGES` needed) |
 
 ---
 
-## 🛡️ Robust Permission Gate & Compatibility Handling
+## Getting the app
 
-Requesting sensitive system identifiers on modern Android versions (Android 11, 12, 13, 14, 15, and 16) is highly restricted and subject to runtime permissions. 
+Spectre is **sideload-only** — it is not on the Play Store.
 
-Spectre features a **highly robust, crash-free permission handling engine** to gracefully extract information:
-1. **Dynamic Permission Mapping**: If a particular signal requires permission, it is listed as `NEEDS_PERMISSION` and provides a safe prompt to request it.
-2. **SDK Version Guarding**: Permissions such as `POST_NOTIFICATIONS` (SDK 33+), `BLUETOOTH_CONNECT`/`BLUETOOTH_SCAN` (SDK 31+), and media permissions are dynamically adapted depending on the host device's actual SDK level. Attempting to request API 31+ permissions on older devices will gracefully map to backward-compatible fallback checks (e.g. `ACCESS_COARSE_LOCATION` or Bluetooth legacy API) rather than crashing the process.
-3. **Graceful Failbacks**: If a permission request is rejected or is unavailable on the hardware, the app avoids runtime exceptions by logging a safe fallback value (e.g. `"PERMISSION_DENIED"` or `"NOT_AVAILABLE"`) and allows the scanning flow to continue uninterrupted.
+1. Go to [**Releases**](https://github.com/matepazy/spectre-app/releases)
+2. Download the latest `.apk`
+3. Enable *Install from unknown sources* for your browser or file manager
+4. Install and open
 
----
-
-## 📤 Features
-* **Live Signal Polling**: Signals are polled dynamically every 2 seconds, ensuring the battery temperature, RAM usage, and sensor states reflect immediate reality.
-* **Local Identity Scoring**: Computes a "Fingerprint Security Score" and "Uniqueness Score" indicating how distinct or identifiable your device configuration is.
-* **Search & Filter**: Find specific parameters instantly using an integrated high-performance text-based search bar.
-* **Export Diagnostics**: Export the entire scanned payload as a formatted JSON report or copy it directly to your clipboard for security audit purposes.
+The app checks GitHub Releases on launch and will notify you when a new version is available, with an in-app download and install flow.
 
 ---
 
-## 🏗️ Development & Compilation
+## Technical overview
 
-To compile and run the application locally:
+> This section is for developers and researchers interested in how Spectre is built.
 
-### Prerequisites
-* Android Studio (Ladybug or newer)
-* Android SDK 36 (or compatible)
-* JDK 17
+### Architecture
 
-### Commands
-Build the debug APK:
-```bash
-gradle assembleDebug
+```
+┌──────────────────────────────────────────────────────────┐
+│                        UI Layer                          │
+│           Jetpack Compose  ·  Material Design 3          │
+│   SpectreScreens.kt  —  dark theme, animated charts,    │
+│   expandable signal cards, search/filter, export         │
+└───────────────────────┬──────────────────────────────────┘
+                        │ StateFlow / collectAsStateWithLifecycle
+┌───────────────────────▼──────────────────────────────────┐
+│                    ViewModel Layer                        │
+│                   SpectreViewModel.kt                    │
+│   Orchestrates scan lifecycle · debounces permission     │
+│   requests · drives 2-second live polling coroutine      │
+└──────────┬────────────────────────────┬──────────────────┘
+           │                            │
+┌──────────▼───────────┐   ┌────────────▼─────────────────┐
+│   Signal Providers   │   │      Inference Engine        │
+│ DeviceSignalProviders│   │  AppInferenceEngine.kt       │
+│ .kt  (181 KB)        │   │                              │
+│                      │   │  · Tracking risk score       │
+│  Reads from:         │   │  · Uniqueness index          │
+│  · Android APIs      │   │  · Active vulnerability      │
+│  · System files      │   │    count (threatScore >= 7)  │
+│  · Telephony mgr     │   │  · SHA-256 device signature  │
+│  · Sensor mgr        │   │  · Fingerprint narrative     │
+│  · PackageManager    │   └──────────────────────────────┘
+└──────────────────────┘
+           │
+┌──────────▼───────────────────────────────────────────────┐
+│                   Permission Layer                        │
+│                   PermissionCenter.kt                    │
+│   SDK-version-aware permission mapping · safe fallbacks  │
+│   for Bluetooth (API 31+), notifications (API 33+),      │
+│   and media storage (API 33+)                            │
+└──────────────────────────────────────────────────────────┘
 ```
 
-Run unit tests and local Robolectric verification:
+### Key design decisions
+
+**Signal model** — Every signal is a `FingerprintSignal` with a `threatScore` (0–10), `SignalCategory` tier, optional `detailedData` sub-items, and a `sensitiveRawValue` that is SHA-256 hashed before being included in the device signature. This means the signature can be reproduced without exposing raw identifiers.
+
+**Inference** — `AppInferenceEngine` computes scores locally using weighted signal counts: passive signals × 1.0, permission signals × 2.5, advanced signals × 2.0. The tracking risk score is the ratio of exposed threat points to total possible threat points, scaled to 0–100%.
+
+**Permission handling** — `PermissionCenter` maps each permission to its safe runtime equivalent per SDK level. No API 31+ permission string is ever passed to `checkSelfPermission` on API 30 and below; instead it transparently falls back to the legacy coarse-location or Bluetooth path.
+
+**Updates** — `VersionUpdater` polls `api.github.com/repos/matepazy/spectre-app/releases`, parses semantic versions, and downloads the APK asset directly into the app's cache directory. Installation is triggered via `FileProvider` + `ACTION_VIEW`.
+
+### Stack
+
+| Layer | Technology |
+|---|---|
+| Language | Kotlin |
+| UI | Jetpack Compose + Material Design 3 |
+| State | `StateFlow` + structured coroutines |
+| Blur effects | [Haze](https://github.com/chrisbanes/haze) |
+| Networking | OkHttp + Retrofit |
+| JSON | Moshi + KSP codegen |
+| Local DB | Room |
+| Biometrics | AndroidX Biometric |
+| Tests | JUnit · Robolectric · Roborazzi |
+| Min SDK | 24 (Android 7.0) |
+| Target SDK | 37 |
+
+### Building from source
+
+**Prerequisites**
+- Android Studio Ladybug or newer
+- JDK 17
+- Android SDK 37
+
+**Build debug APK**
 ```bash
-gradle :app:testDebugUnitTest
+./gradlew assembleDebug
 ```
+
+**Run unit tests**
+```bash
+./gradlew :app:testDebugUnitTest
+```
+
+---
+
+## Permissions
+
+Spectre will request some permissions at runtime to unlock additional signals. Every permission request is optional — refusing one simply marks that signal as `Permission Blocked` rather than crashing or nagging again.
+
+Permissions that may be requested:
+
+| Permission | Signal unlocked |
+|---|---|
+| `READ_CONTACTS` | Contact list exposure threshold |
+| `READ_PHONE_STATE` | IMEI, subscriber ID, telephony state |
+| `ACCESS_FINE_LOCATION` | Precise GPS coordinates |
+| `BLUETOOTH_CONNECT` (API 31+) | Paired Bluetooth device list |
+| `BLUETOOTH_SCAN` (API 31+) | Nearby BLE beacon scan |
+| `READ_CALL_LOG` | Call log metadata |
+| `READ_SMS` | SMS metadata |
+| `ACTIVITY_RECOGNITION` | Step count / motion state |
+| `CAMERA` | Camera hardware characteristics |
+| `RECORD_AUDIO` | Microphone hardware presence |
+
+---
+
+## Inspiration
+
+Spectre was directly inspired by **[Loupe](https://github.com/mysk-research/loupe)** by Mysk Research, which performs an equivalent analysis on iOS. Spectre translates that concept to Android's broader, more fragmented ecosystem.
+
+---
+
+## License
+
+GNU General Public License v3.0 — see [LICENSE](LICENSE) for full text.
