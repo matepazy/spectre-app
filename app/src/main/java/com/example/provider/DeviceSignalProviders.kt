@@ -266,38 +266,58 @@ class InstalledAppsProvider : SignalProvider() {
     override suspend fun provideSignals(context: Context): List<FingerprintSignal> {
         val signals = mutableListOf<FingerprintSignal>()
         val socialSchemes = mapOf(
-            "WhatsApp" to "whatsapp://send",
-            "Telegram" to "tg://resolve",
-            "X / Twitter" to "twitter://timeline",
-            "Facebook" to "fb://feed",
-            "Instagram" to "instagram://app",
-            "YouTube" to "vnd.youtube://",
-            "Netflix" to "nflx://",
-            "Spotify" to "spotify://",
-            "TikTok" to "snssdk1128://",
-            "PayPal" to "paypal://"
+            "WhatsApp" to listOf("whatsapp://send", "whatsapp://"),
+            "Telegram" to listOf("tg://resolve", "tg://"),
+            "X / Twitter" to listOf("twitter://timeline", "twitter://"),
+            "Facebook" to listOf("fb://feed", "fb://"),
+            "Instagram" to listOf("instagram://app", "instagram://"),
+            "YouTube" to listOf("vnd.youtube://", "youtube://"),
+            "Netflix" to listOf("nflx://"),
+            "Spotify" to listOf("spotify://"),
+            "TikTok" to listOf("snssdk1128://", "tiktok://"),
+            "PayPal" to listOf("paypal://"),
+            "Snapchat" to listOf("snapchat://"),
+            "Reddit" to listOf("reddit://"),
+            "LinkedIn" to listOf("linkedin://"),
+            "Pinterest" to listOf("pinterest://"),
+            "Discord" to listOf("discord://"),
+            "Slack" to listOf("slack://"),
+            "Signal" to listOf("sgnl://", "signal://"),
+            "Microsoft Teams" to listOf("msteams://"),
+            "Skype" to listOf("skype://"),
+            "Zoom" to listOf("zoomus://"),
+            "Threads" to listOf("barcelona://"),
+            "Mastodon" to listOf("mastodon://")
         )
         
         val discoveredApps = mutableListOf<String>()
         val pm = context.packageManager
         val detailedItems = mutableListOf<DetailedItem>()
         
-        for ((appName, scheme) in socialSchemes) {
+        for ((appName, schemes) in socialSchemes) {
             try {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(scheme))
-                val resolved = pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
-                val isInstalled = resolved.isNotEmpty()
+                var isInstalled = false
+                var matchedScheme = schemes.firstOrNull() ?: ""
+                for (scheme in schemes) {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(scheme))
+                    val resolved = pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+                    if (resolved.isNotEmpty()) {
+                        isInstalled = true
+                        matchedScheme = scheme
+                        break
+                    }
+                }
                 if (isInstalled) {
                     discoveredApps.add(appName)
                 }
                 detailedItems.add(detailedItem(
                     label = appName,
                     value = if (isInstalled) "Active Footprint Detected" else "Not Detected (Sandboxed)",
-                    description = "Queried Deep Link Scheme: $scheme",
+                    description = "Queried Deep Link Scheme: $matchedScheme",
                     iconName = if (isInstalled) "check" else "close"
                 ))
             } catch (e: Exception) {
-                detailedItems.add(detailedItem(appName, "Query Blocked (${e.localizedMessage})", "Scheme: $scheme", "close"))
+                detailedItems.add(detailedItem(appName, "Query Blocked (${e.localizedMessage})", "Schemes: ${schemes.joinToString(", ")}", "close"))
             }
         }
         
